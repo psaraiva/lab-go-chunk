@@ -1,0 +1,29 @@
+@startuml
+state action : "download"
+state "step1" as s1: "get hash by file name"
+note "Action: Download File" as n1
+state "step2" as s2: "get chunks by hash"
+state "step3" as s3: "generate file by chunks"
+state "end" as e0 <<end>>
+state "end" as e1 <<end>>
+state "end" as e2 <<end>>
+state "end" as e3 <<end>>
+state "choice" as c1 <<choice>>
+state "choice" as c2 <<choice>>
+state "choice" as c3 <<choice>>
+
+[*] --> action : input params
+action --> s1
+s1 --> c1 : error?
+c1 --> e1: error message
+c1 --> s2
+
+s2 --> c2 : error?
+c2 --> e2: error message
+c2 --> s3
+
+s3 --> c3 : error?
+c3 --> e3: error message
+c3 --> e0: success message
+
+@enduml

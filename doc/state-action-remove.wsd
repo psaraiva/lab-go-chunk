@@ -1,0 +1,42 @@
+@startuml
+state action : "remove"
+state "step1" as s1: "get hash file"
+note "Action: Remove File" as n1
+state "step2" as s2: "get list of chunk"
+state "step3" as s3: "remove chunk bin"
+state "step4" as s4: "remove Hash To Chunk File"
+state "step5" as s5: "remove Hash To Hash File"
+state "end" as e0 <<end>>
+state "end" as e1 <<end>>
+state "end" as e2 <<end>>
+state "end" as e3 <<end>>
+state "end" as e4 <<end>>
+state "end" as e5 <<end>>
+state "choice" as c1 <<choice>>
+state "choice" as c2 <<choice>>
+state "choice" as c3 <<choice>>
+state "choice" as c4 <<choice>>
+state "choice" as c5 <<choice>>
+
+[*] --> action : input params
+action --> s1
+s1 --> c1: error?
+c1 --> e1: error message
+c1 --> s2
+
+s2 --> c2: error?
+c2 --> e2: error message
+c2 --> s3
+
+s3 --> c3: error?
+c3 --> e3: error message
+c3 --> s4
+
+s4 --> c4: error?
+c4 --> e4: error message
+c4 --> s5
+
+s5 --> c5: error?
+c5 --> e5: error message
+c5 --> e0: success message
+@enduml
