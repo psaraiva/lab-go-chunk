@@ -25,20 +25,12 @@ type Action struct {
 	Hash       string
 }
 
-type hashFile struct {
-	List []hashFileItem
-}
-
-type hashFileItem struct {
+type hashItem struct {
 	Hash string
 	Name string
 }
 
-type chunkFile struct {
-	List []chunkFileItem
-}
-
-type chunkFileItem struct {
+type chunkItem struct {
 	HashFile string
 	Chunk    []string
 }
@@ -121,16 +113,16 @@ func (ac *Action) actionRemove() error {
 	}
 
 	GetLogActivity().WriteLog("Removendo registro do arquivo de chunk...")
-	err = ac.removeHashToChunkFile(hash)
+	err = ac.removeHashFileToChunkCollection(hash)
 	if err != nil {
 		return err
 	}
 
 	GetLogActivity().WriteLog("Removendo registro do arquivo de hash...")
-	return ac.removeHashToHashFile(hash)
+	return ac.removeHashToCollection(hash)
 }
 
-func (ac *Action) removeHashToHashFile(hashString string) error {
+func (ac *Action) removeHashToCollection(hashString string) error {
 	jsonHashFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
 	if err != nil {
 		return err
@@ -138,20 +130,20 @@ func (ac *Action) removeHashToHashFile(hashString string) error {
 	defer jsonHashFile.Close()
 
 	decoder := json.NewDecoder(jsonHashFile)
-	hashFile := hashFile{}
-	err = decoder.Decode(&hashFile)
+	hashList := []hashItem{}
+	err = decoder.Decode(&hashList)
 	if err != nil {
 		return err
 	}
 
-	for index, item := range hashFile.List {
+	for index, item := range hashList {
 		if item.Hash == hashString {
-			hashFile.List = append(hashFile.List[:index], hashFile.List[index+1:]...)
+			hashList = append(hashList[:index], hashList[index+1:]...)
 			break
 		}
 	}
 
-	upJSON, err := json.MarshalIndent(hashFile, "", "  ")
+	upJSON, err := json.MarshalIndent(hashList, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -164,7 +156,7 @@ func (ac *Action) removeHashToHashFile(hashString string) error {
 	return nil
 }
 
-func (ac *Action) removeHashToChunkFile(hashFile string) error {
+func (ac *Action) removeHashFileToChunkCollection(hashFile string) error {
 	jsonChunkFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
 		return err
@@ -172,20 +164,20 @@ func (ac *Action) removeHashToChunkFile(hashFile string) error {
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkFile := chunkFile{}
-	err = decoder.Decode(&chunkFile)
+	chunkList := []chunkItem{}
+	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return err
 	}
 
-	for index, item := range chunkFile.List {
+	for index, item := range chunkList {
 		if item.HashFile == hashFile {
-			chunkFile.List = append(chunkFile.List[:index], chunkFile.List[index+1:]...)
+			chunkList = append(chunkList[:index], chunkList[index+1:]...)
 			break
 		}
 	}
 
-	upJSON, err := json.MarshalIndent(chunkFile, "", "  ")
+	upJSON, err := json.MarshalIndent(chunkList, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -206,23 +198,23 @@ func (ac *Action) isChunkCanBeRemoved(chunk string) (bool, error) {
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkFile := chunkFile{}
-	err = decoder.Decode(&chunkFile)
+	chunkList := []chunkItem{}
+	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return false, err
 	}
 
-	countChuks := ac.getCountChunkMap(chunkFile)
-	if countChuks[chunk] > 1 {
+	countList := ac.getCountChunkMap(chunkList)
+	if countList[chunk] > 1 {
 		return false, nil
 	}
 
 	return true, nil
 }
 
-func (ac *Action) getCountChunkMap(chunkFile chunkFile) map[string]int {
+func (ac *Action) getCountChunkMap(chunkList []chunkItem) map[string]int {
 	chunkCount := make(map[string]int)
-	for _, item := range chunkFile.List {
+	for _, item := range chunkList {
 		for _, value := range item.Chunk {
 			chunkCount[value]++
 		}
@@ -231,12 +223,12 @@ func (ac *Action) getCountChunkMap(chunkFile chunkFile) map[string]int {
 }
 
 func (ac *Action) actionClear() error {
-	err := ac.restoreFileConfigChunk()
+	err := ac.restoreAuxChunk()
 	if err != nil {
 		return err
 	}
 
-	err = ac.restoreFileConfigHash()
+	err = ac.restoreAuxHash()
 	if err != nil {
 		return err
 	}
@@ -264,16 +256,16 @@ func (ac *Action) actionClear() error {
 	return nil
 }
 
-func (ac *Action) restoreFileConfigChunk() error {
-	err := os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), []byte("{\"List\":[]}"), 0644)
+func (ac *Action) restoreAuxChunk() error {
+	err := os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), []byte("[]"), 0644)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ac *Action) restoreFileConfigHash() error {
-	err := os.WriteFile(os.Getenv("JSON_FILE_HASH"), []byte("{\"List\":[]}"), 0644)
+func (ac *Action) restoreAuxHash() error {
+	err := os.WriteFile(os.Getenv("JSON_FILE_HASH"), []byte("[]"), 0644)
 	if err != nil {
 		return err
 	}
@@ -387,13 +379,13 @@ func (ac *Action) getHashByFileName(fileName string) (string, error) {
 	defer jsonFile.Close()
 
 	decoder := json.NewDecoder(jsonFile)
-	hashFile := hashFile{}
-	err = decoder.Decode(&hashFile)
+	hashList := []hashItem{}
+	err = decoder.Decode(&hashList)
 	if err != nil {
 		return "", err
 	}
 
-	for _, item := range hashFile.List {
+	for _, item := range hashList {
 		if item.Name == fileName {
 			return item.Hash, nil
 		}
@@ -403,20 +395,20 @@ func (ac *Action) getHashByFileName(fileName string) (string, error) {
 }
 
 func (ac *Action) getChunksByHash(hash string) ([]string, error) {
-	jsonFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
+	jsonChunk, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
 		return nil, err
 	}
-	defer jsonFile.Close()
+	defer jsonChunk.Close()
 
-	decoder := json.NewDecoder(jsonFile)
-	chunkFile := chunkFile{}
-	err = decoder.Decode(&chunkFile)
+	decoder := json.NewDecoder(jsonChunk)
+	chunkList := []chunkItem{}
+	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, item := range chunkFile.List {
+	for _, item := range chunkList {
 		if item.HashFile == hash {
 			return item.Chunk, nil
 		}
@@ -440,31 +432,31 @@ func (ac *Action) processHash() error {
 	hashInBytes := hash.Sum(nil)
 	hashString := hex.EncodeToString(hashInBytes)
 	ac.Hash = hashString
-	return ac.addHashToFile(hashString)
+	return ac.addHashToCollection(hashString)
 }
 
-func (a *Action) addHashToFile(hash string) error {
-	jsonFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
+func (a *Action) addHashToCollection(hash string) error {
+	jsonHash, err := os.Open(os.Getenv("JSON_FILE_HASH"))
 	if err != nil {
 		return err
 	}
-	defer jsonFile.Close()
+	defer jsonHash.Close()
 
-	decoder := json.NewDecoder(jsonFile)
-	hashFile := hashFile{}
-	err = decoder.Decode(&hashFile)
+	decoder := json.NewDecoder(jsonHash)
+	hashList := []hashItem{}
+	err = decoder.Decode(&hashList)
 	if err != nil {
 		return err
 	}
 
-	for _, item := range hashFile.List {
+	for _, item := range hashList {
 		if item.Hash == hash {
 			return fmt.Errorf("arquivo já existe")
 		}
 	}
 
-	hashFile.List = append(hashFile.List, hashFileItem{Hash: hash, Name: filepath.Base(a.FileTarget)})
-	updatedJSON, err := json.MarshalIndent(hashFile, "", "  ")
+	hashList = append(hashList, hashItem{Hash: hash, Name: filepath.Base(a.FileTarget)})
+	updatedJSON, err := json.MarshalIndent(hashList, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -527,7 +519,7 @@ func (a *Action) processChunk() error {
 		}
 	}
 
-	item := chunkFileItem{}
+	item := chunkItem{}
 	item.HashFile = a.Hash
 	item.Chunk = chunks
 
@@ -538,14 +530,14 @@ func (a *Action) processChunk() error {
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkFile := chunkFile{}
-	err = decoder.Decode(&chunkFile)
+	chunkList := []chunkItem{}
+	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return err
 	}
 
-	chunkFile.List = append(chunkFile.List, item)
-	updatedJSON, err := json.MarshalIndent(chunkFile, "", "  ")
+	chunkList = append(chunkList, item)
+	updatedJSON, err := json.MarshalIndent(chunkList, "", "  ")
 	if err != nil {
 		return err
 	}
