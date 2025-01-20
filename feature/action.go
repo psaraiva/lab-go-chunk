@@ -16,11 +16,7 @@ const (
 	ACTION_DOWNLOAD = "download"
 	ACTION_REMOVE   = "remove"
 	ACTION_UPLOAD   = "upload"
-	CHUNCK_SIZE     = 1 * 1024 // 1Kb
-	FOLDER_STORAGE  = "storage"
-	FOLDER_TMP      = "tmp_file"
-	JSON_FILE_CHUNK = "config/chunk.json"
-	JSON_FILE_HASH  = "config/hash.json"
+	CHUNK_SIZE      = 1 * 1024 // 1Kb
 )
 
 type Action struct {
@@ -118,7 +114,7 @@ func (ac *Action) actionRemove() error {
 		}
 
 		GetLogActivity().WriteLog("Removendo chunk: " + hashChunk + ".bin")
-		err = os.Remove(FOLDER_STORAGE + "/" + hashChunk + ".bin")
+		err = os.Remove(os.Getenv("FOLDER_STORAGE") + "/" + hashChunk + ".bin")
 		if err != nil {
 			return err
 		}
@@ -135,7 +131,7 @@ func (ac *Action) actionRemove() error {
 }
 
 func (ac *Action) removeHashToHashFile(hashString string) error {
-	jsonHashFile, err := os.Open(JSON_FILE_HASH)
+	jsonHashFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
 	if err != nil {
 		return err
 	}
@@ -160,7 +156,7 @@ func (ac *Action) removeHashToHashFile(hashString string) error {
 		return err
 	}
 
-	err = os.WriteFile(JSON_FILE_HASH, upJSON, 0644)
+	err = os.WriteFile(os.Getenv("JSON_FILE_HASH"), upJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -169,7 +165,7 @@ func (ac *Action) removeHashToHashFile(hashString string) error {
 }
 
 func (ac *Action) removeHashToChunkFile(hashFile string) error {
-	jsonChunkFile, err := os.Open(JSON_FILE_CHUNK)
+	jsonChunkFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
 		return err
 	}
@@ -194,7 +190,7 @@ func (ac *Action) removeHashToChunkFile(hashFile string) error {
 		return err
 	}
 
-	err = os.WriteFile(JSON_FILE_CHUNK, upJSON, 0644)
+	err = os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), upJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -203,7 +199,7 @@ func (ac *Action) removeHashToChunkFile(hashFile string) error {
 }
 
 func (ac *Action) isChunkCanBeRemoved(chunk string) (bool, error) {
-	jsonChunkFile, err := os.Open(JSON_FILE_CHUNK)
+	jsonChunkFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
 		return false, err
 	}
@@ -269,7 +265,7 @@ func (ac *Action) actionClear() error {
 }
 
 func (ac *Action) restoreFileConfigChunk() error {
-	err := os.WriteFile(JSON_FILE_CHUNK, []byte("{\"List\":[]}"), 0644)
+	err := os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), []byte("{\"List\":[]}"), 0644)
 	if err != nil {
 		return err
 	}
@@ -277,7 +273,7 @@ func (ac *Action) restoreFileConfigChunk() error {
 }
 
 func (ac *Action) restoreFileConfigHash() error {
-	err := os.WriteFile(JSON_FILE_HASH, []byte("{\"List\":[]}"), 0644)
+	err := os.WriteFile(os.Getenv("JSON_FILE_HASH"), []byte("{\"List\":[]}"), 0644)
 	if err != nil {
 		return err
 	}
@@ -285,7 +281,7 @@ func (ac *Action) restoreFileConfigHash() error {
 }
 
 func (ac *Action) cleanTmp() error {
-	err := filepath.Walk(FOLDER_TMP, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(os.Getenv("FOLDER_TMP"), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -300,7 +296,7 @@ func (ac *Action) cleanTmp() error {
 }
 
 func (ac *Action) cleanStorage() error {
-	err := filepath.Walk(FOLDER_STORAGE, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(os.Getenv("FOLDER_STORAGE"), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -360,15 +356,15 @@ func (ac *Action) actionDownload() error {
 	return ac.generateFileByChunks(list, "")
 }
 
-func (ac *Action) generateFileByChunks(chuncks []string, targetFolder string) error {
+func (ac *Action) generateFileByChunks(chunks []string, targetFolder string) error {
 	out, err := os.Create(targetFolder + ac.FileTarget)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	for _, file := range chuncks {
-		in, err := os.Open(FOLDER_STORAGE + "/" + file + ".bin")
+	for _, file := range chunks {
+		in, err := os.Open(os.Getenv("FOLDER_STORAGE") + "/" + file + ".bin")
 		if err != nil {
 			return err
 		}
@@ -384,7 +380,7 @@ func (ac *Action) generateFileByChunks(chuncks []string, targetFolder string) er
 }
 
 func (ac *Action) getHashByFileName(fileName string) (string, error) {
-	jsonFile, err := os.Open(JSON_FILE_HASH)
+	jsonFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
 	if err != nil {
 		return "", err
 	}
@@ -407,7 +403,7 @@ func (ac *Action) getHashByFileName(fileName string) (string, error) {
 }
 
 func (ac *Action) getChunksByHash(hash string) ([]string, error) {
-	jsonFile, err := os.Open(JSON_FILE_CHUNK)
+	jsonFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +444,7 @@ func (ac *Action) processHash() error {
 }
 
 func (a *Action) addHashToFile(hash string) error {
-	jsonFile, err := os.Open(JSON_FILE_HASH)
+	jsonFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
 	if err != nil {
 		return err
 	}
@@ -473,7 +469,7 @@ func (a *Action) addHashToFile(hash string) error {
 		return err
 	}
 
-	err = os.WriteFile(JSON_FILE_HASH, updatedJSON, 0644)
+	err = os.WriteFile(os.Getenv("JSON_FILE_HASH"), updatedJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -488,7 +484,7 @@ func (a *Action) sendFileToTmp() error {
 	}
 	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(FOLDER_TMP + "/" + a.Hash)
+	destinationFile, err := os.Create(os.Getenv("FOLDER_TMP") + "/" + a.Hash)
 	if err != nil {
 		return err
 	}
@@ -503,14 +499,14 @@ func (a *Action) sendFileToTmp() error {
 }
 
 func (a *Action) processChunk() error {
-	file, err := os.Open(FOLDER_TMP + "/" + a.Hash)
+	file, err := os.Open(os.Getenv("FOLDER_TMP") + "/" + a.Hash)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
 	var chunks []string
-	buf := make([]byte, CHUNCK_SIZE)
+	buf := make([]byte, CHUNK_SIZE)
 	for {
 		n, err := file.Read(buf)
 		if err != nil && err != io.EOF {
@@ -525,7 +521,7 @@ func (a *Action) processChunk() error {
 		chunkHashString := hex.EncodeToString(chunkHash[:])
 		chunks = append(chunks, chunkHashString)
 
-		err = a.saveChunckBin(buf[:n], chunkHashString)
+		err = a.saveChunkBin(buf[:n], chunkHashString)
 		if err != nil {
 			return err
 		}
@@ -535,7 +531,7 @@ func (a *Action) processChunk() error {
 	item.HashFile = a.Hash
 	item.Chunk = chunks
 
-	jsonChunkFile, err := os.Open(JSON_FILE_CHUNK)
+	jsonChunkFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
 		return err
 	}
@@ -554,7 +550,7 @@ func (a *Action) processChunk() error {
 		return err
 	}
 
-	err = os.WriteFile(JSON_FILE_CHUNK, updatedJSON, 0644)
+	err = os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), updatedJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -562,8 +558,8 @@ func (a *Action) processChunk() error {
 	return nil
 }
 
-func (a *Action) saveChunckBin(data []byte, hash string) error {
-	file, err := os.Create(fmt.Sprintf("%s/%s.bin", FOLDER_STORAGE, hash))
+func (a *Action) saveChunkBin(data []byte, hash string) error {
+	file, err := os.Create(fmt.Sprintf("%s/%s.bin", os.Getenv("FOLDER_STORAGE"), hash))
 	if err != nil {
 		return err
 	}
@@ -580,5 +576,5 @@ func (a *Action) saveChunckBin(data []byte, hash string) error {
 }
 
 func (a *Action) removeFileToTmp() error {
-	return os.Remove(fmt.Sprintf("%s/%s", FOLDER_TMP, a.Hash))
+	return os.Remove(fmt.Sprintf("%s/%s", os.Getenv("FOLDER_TMP"), a.Hash))
 }

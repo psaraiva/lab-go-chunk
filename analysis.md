@@ -16,7 +16,7 @@ A lista abaixo são pontos de atenção que serão gerados _issues_:
 - O arquivo action.go faz muita coisa, é necessário quebrar em outros arquivos conforme as responsabilidades.
 - A actions devem ter uma interface em comum para melhor flexibilidade.
 - Uma fábrica de action deve ser desenvolvida.
-- O uso de Logs deve ser imbutido na action para uso interno.
+- O uso de Logs deve ser embutido na action para uso interno.
 - Cada action deve ter seu próprio arquivo `.go`
 - Cada etapa de uma action deve seguir ACID.
 - A aplicação deve usar *SQLite* para armazenas os arquivos.

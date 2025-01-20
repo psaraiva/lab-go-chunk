@@ -5,9 +5,16 @@ import (
 	"fmt"
 	"lab/feature"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		panic("Error loading .env file")
+	}
+
 	var action = feature.MakeAction()
 
 	feature.LogSetConfig()
@@ -33,7 +40,7 @@ func main() {
 
 	action.Action = *arg_action
 	action.FileTarget = *arg_file_target
-	err := action.Execute()
+	err = action.Execute()
 	if err != nil {
 		println(err.Error())
 	}

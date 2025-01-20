@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	LOG_FILE_ERROR  = "log/error.log"
-	LOG_FILE_ACTIVE = "log/activity.log"
 	LOG_TYPE_ERROR  = "error"
 	LOG_TYPE_ACTIVE = "active"
 )
@@ -23,11 +21,11 @@ func LogSetConfig() {
 }
 
 func GetLogActivity() *Log {
-	return &Log{logType: LOG_TYPE_ACTIVE, file: LOG_FILE_ACTIVE}
+	return &Log{logType: LOG_TYPE_ACTIVE, file: os.Getenv("LOG_FILE_ACTIVE")}
 }
 
 func GetLogError() *Log {
-	return &Log{logType: LOG_TYPE_ERROR, file: LOG_FILE_ERROR}
+	return &Log{logType: LOG_TYPE_ERROR, file: os.Getenv("LOG_FILE_ERROR")}
 }
 
 func (l *Log) WriteLog(msg string) error {
@@ -45,7 +43,7 @@ func (l *Log) WriteLog(msg string) error {
 }
 
 func (l *Log) writeLogError(msg string) error {
-	file, err := os.OpenFile(LOG_FILE_ERROR, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile(os.Getenv("LOG_FILE_ERROR"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return fmt.Errorf("arquivo de LOG não encontrado")
 	}
@@ -55,7 +53,7 @@ func (l *Log) writeLogError(msg string) error {
 }
 
 func (l *Log) writeLogActivity(msg string) error {
-	file, err := os.OpenFile(LOG_FILE_ACTIVE, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile(os.Getenv("LOG_FILE_ACTIVE"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return fmt.Errorf("arquivo de LOG não encontrado")
 	}
@@ -79,7 +77,7 @@ func (l *Log) ClearLog() error {
 }
 
 func (l *Log) clearLogError() error {
-	file, err := os.OpenFile(LOG_FILE_ERROR, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+	file, err := os.OpenFile(os.Getenv("LOG_FILE_ERROR"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		return fmt.Errorf("falha ao abrir arquivo de log de erro")
 	}
@@ -91,7 +89,7 @@ func (l *Log) clearLogError() error {
 }
 
 func (l *Log) clearLogActivity() error {
-	file, err := os.OpenFile(LOG_FILE_ACTIVE, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+	file, err := os.OpenFile(os.Getenv("LOG_FILE_ACTIVE"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		return fmt.Errorf("falha ao abrir arquivo de log de atividade")
 	}
