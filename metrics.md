@@ -14,46 +14,48 @@ Para gerar métrica de complexidade ciclomática foi utilizado o [gocyclo](https
 
 ## Overview
 ```bash
-gocyclo ./main.go
-5 main main ./main.go:10:1
-2 main validArgAction ./main.go:45:1
-1 main validArgFileTarget ./main.go:57:1
+gocyclo ./src/cmd
+7 main main src/cmd/main.go:13:1
+2 main validArgAction src/cmd/main.go:56:1
+1 main validArgFileTarget src/cmd/main.go:68:1
 
-gocyclo ./feature/log.go
-3 feature (*Log).ClearLog ./feature/log.go:67:1
-3 feature (*Log).WriteLog ./feature/log.go:33:1
-2 feature (*Log).clearLogActivity ./feature/log.go:93:1
-2 feature (*Log).clearLogError ./feature/log.go:81:1
-2 feature (*Log).writeLogActivity ./feature/log.go:57:1
-2 feature (*Log).writeLogError ./feature/log.go:47:1
-1 feature GetLogError ./feature/log.go:29:1
-1 feature GetLogActivity ./feature/log.go:25:1
-1 feature LogSetConfig ./feature/log.go:21:1
+gocyclo ./src/internal/actions/
+11 actions (*Action).processChunk src/internal/actions/upload.go:155:1
+9 actions Execute src/internal/actions/action.go:39:1
+8 actions (*Action).FeatureRemove src/internal/actions/remove.go:9:1
+7 actions (*Action).addHashToCollection src/internal/actions/upload.go:100:1
+7 actions (*Action).removeHashToCollection src/internal/actions/remove.go:115:1
+7 actions (*Action).removeHashFileToChunkCollection src/internal/actions/remove.go:81:1
+7 actions (*Action).FeatureClear src/internal/actions/clear.go:9:1
+6 actions (*Action).isNewFile src/internal/actions/upload.go:53:1
+6 actions (*Action).FeatureUpload src/internal/actions/upload.go:15:1
+5 actions (*Action).generateFileByChunks src/internal/actions/download.go:26:1
+5 actions (*Action).getChunksByHash src/internal/actions/action.go:109:1
+5 actions (*Action).getHashByFileName src/internal/actions/action.go:86:1
+4 actions (*Action).saveChunkBin src/internal/actions/upload.go:215:1
+4 actions (*Action).sendFileToTmp src/internal/actions/upload.go:134:1
+4 actions (*Action).isChunkCanBeRemoved src/internal/actions/remove.go:49:1
+3 actions (*Action).GenerateHashFile src/internal/actions/upload.go:81:1
+3 actions (*Action).getCountChunkMap src/internal/actions/remove.go:71:1
+3 actions (*Action).FeatureDownload src/internal/actions/download.go:9:1
+3 actions (*Action).cleanTmp src/internal/actions/clear.go:74:1
+3 actions (*Action).cleanStorage src/internal/actions/clear.go:59:1
+2 actions (*Action).resetHashCollection src/internal/actions/clear.go:51:1
+2 actions (*Action).resetChunkCollection src/internal/actions/clear.go:43:1
+1 actions (*Action).removeFileToTmp src/internal/actions/upload.go:232:1
+1 actions (*Action).GetActionType src/internal/actions/action.go:82:1
+1 actions MakeAction src/internal/actions/action.go:35:1
 
-gocyclo ./feature/action.go
-11 feature (*Action).processChunk ./feature/action.go:505:1
-9 feature (*Action).Execute ./feature/action.go:54:1
-8 feature (*Action).actionRemove ./feature/action.go:97:1
-7 feature (*Action).addHashToFile ./feature/action.go:450:1
-7 feature (*Action).actionClear ./feature/action.go:237:1
-7 feature (*Action).removeHashToChunkFile ./feature/action.go:171:1
-7 feature (*Action).removeHashToHashFile ./feature/action.go:137:1
-5 feature (*Action).getChunksByHash ./feature/action.go:409:1
-5 feature (*Action).getHashByFileName ./feature/action.go:386:1
-5 feature (*Action).generateFileByChunks ./feature/action.go:363:1
-5 feature (*Action).actionUpload ./feature/action.go:317:1
-4 feature (*Action).saveChunckBin ./feature/action.go:565:1
-4 feature (*Action).sendFileToTmp ./feature/action.go:484:1
-4 feature (*Action).isChunkCanBeRemoved ./feature/action.go:205:1
-3 feature (*Action).processHash ./feature/action.go:432:1
-3 feature (*Action).actionDownload ./feature/action.go:349:1
-3 feature (*Action).cleanStorage ./feature/action.go:302:1
-3 feature (*Action).cleanTmp ./feature/action.go:287:1
-3 feature (*Action).getCountChunkMap ./feature/action.go:227:1
-2 feature (*Action).restoreFileConfigHash ./feature/action.go:279:1
-2 feature (*Action).restoreFileConfigChunk ./feature/action.go:271:1
-1 feature (*Action).removeFileToTmp ./feature/action.go:582:1
-1 feature MakeAction ./feature/action.go:50:1
+gocyclo ./src/logger/
+3 logger (*Log).ClearLog src/logger/log.go:90:1
+3 logger (*Log).WriteLog src/logger/log.go:31:1
+2 logger (*Log).WriteLogMessageInfo src/logger/log.go:80:1
+2 logger (*Log).WriteLogMessageError src/logger/log.go:70:1
+2 logger (*Log).clearLogActivity src/logger/log.go:57:1
+2 logger (*Log).clearLogError src/logger/log.go:45:1
+1 logger GetLogError src/logger/log.go:27:1
+1 logger GetLogActivity src/logger/log.go:23:1
+1 logger LogSetConfig src/logger/log.go:19:1
 ```
 
 [README](./README.md)

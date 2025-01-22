@@ -1,12 +1,12 @@
 @startuml
-state action : "clear"
-state "step1" as s1: "restore file config chunk"
-note "Action: Clear" as n1
-state "step2" as s2: "restore file config hash"
-state "step3" as s3: "clean storage"
-state "step4" as s4: "clean tmp"
-state "step5" as s5: "clean log error"
-state "step6" as s6: "clean log activity"
+state action : "remove"
+state "step1" as s1: "get hash By fileName"
+note "Action: Remove File" as n1
+state "step2" as s2: "get chunks by hash"
+state "step3" as s3: "is chunk can be removed"
+state "step4" as s4: "remove chunk .bin file"
+state "step5" as s5: "remove hash to chunk File"
+state "step6" as s6: "remove hash to hash File"
 state "end" as e0 <<end>>
 state "end" as e1 <<end>>
 state "end" as e2 <<end>>
@@ -46,5 +46,4 @@ c5 --> s6
 s6 --> c6: error?
 c6 --> e6: error message
 c6 --> e0: success message
-
 @enduml
