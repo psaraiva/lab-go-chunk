@@ -19,21 +19,21 @@ A documentação foi gerada no [platUML](https://plantuml.com/) e estão no dire
 
 ## Como usar
 clear: Restaura aplicação para estado inicial.
-- `go run main.go -action clear`
+- `go run ./src/cmd/main.go -action clear`
 
 upload: Envia o arquivo para o sistema.
-- `go run main.go -action upload -file-target ./input_file_examples/day_book_17.07.txt`
+- `go run ./src/cmd/main.go -action upload -file-target ./out_application/input_file_examples/day_book_17.07.txt`
 
 dowload: Carrega o arquivo do sistema.
-- `go run main.go -action download -file-target day_book_17.07.txt`
+- `go run ./src/cmd/main.go -action download -file-target day_book_17.07.txt`
 
 remove: Remove um arquivo do sistema.
-- `go run main.go -action remove -file-target day_book_18.07.txt`
+- `go run ./src/cmd/main.go -action remove -file-target day_book_18.07.txt`
 
 ## Logs
 A aplicação tem dois tipos de logs:
-- Log de atividades: `./log/activity.log`
-- Log de erros: `./log/error.log`
+- Log de atividades: `./out_application/log/activity.log`
+- Log de erros: `./out_application/log/error.log`
 
 ## Análise
 Análise sobre a aplicação usando ponto vista do macro para micro, do ponto de vista negócio, arquitetura, boas práticas etc.

@@ -1,19 +1,22 @@
 @startuml
 state action : "upload"
-state "step1" as s1: "process hash"
+state "step1" as s1: "is new file"
 note "Action: Upload File" as n1
-state "step2" as s2: "send file to tmp"
-state "step3" as s3: "process chunk"
-state "step4" as s4: "remove file to tmp"
+state "step2" as s2: "add hash to collection"
+state "step3" as s3: "send file to tmp"
+state "step4" as s4: "process chunk"
+state "step5" as s5: "remove file to tmp"
 state "end" as e0 <<end>>
 state "end" as e1 <<end>>
 state "end" as e2 <<end>>
 state "end" as e3 <<end>>
 state "end" as e4 <<end>>
+state "end" as e5 <<end>>
 state "choice" as c1 <<choice>>
 state "choice" as c2 <<choice>>
 state "choice" as c3 <<choice>>
 state "choice" as c4 <<choice>>
+state "choice" as c5 <<choice>>
 
 [*] --> action : input params
 action --> s1
@@ -31,5 +34,9 @@ c3 --> s4
 
 s4 --> c4 : error?
 c4 --> e4: error message
-c4 --> e0: success message
+c4 --> s5
+
+s5 --> c5 : error?
+c5 --> e5: error message
+c5 --> e0: success message
 @enduml
