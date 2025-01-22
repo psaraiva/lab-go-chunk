@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"lab/feature"
+	"lab/src/internal/actions"
+	"lab/src/logger"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -15,13 +16,16 @@ func main() {
 		panic("Error loading .env file")
 	}
 
-	var action = feature.MakeAction()
+	var action = actions.MakeAction()
 
-	feature.LogSetConfig()
-	var logActive = feature.GetLogActivity()
+	logger.LogSetConfig()
+	var logActive = logger.GetLogActivity()
 
-	logActive.WriteLog("Iniciando aplicação...")
 	println("Iniciando aplicação...")
+	err = logActive.WriteLog("Iniciando aplicação...")
+	if err != nil {
+		panic("Não foi possível iniciar log de atividades, aplicação será encerrada")
+	}
 
 	arg_action := flag.String("action", "", "Action to invoke (upload/download/remove/clear)")
 	arg_file_target := flag.String("file-target", "", "File target to action")
@@ -33,14 +37,14 @@ func main() {
 		return
 	}
 
-	if *arg_action != feature.ACTION_CLEAR && !validArgFileTarget(arg_file_target) {
+	if *arg_action != actions.ACTION_CLEAR && !validArgFileTarget(arg_file_target) {
 		fmt.Println("Invalid target:", arg_file_target)
 		return
 	}
 
-	action.Action = *arg_action
+	action.Type = *arg_action
 	action.FileTarget = *arg_file_target
-	err = action.Execute()
+	err = actions.Execute(&action)
 	if err != nil {
 		println(err.Error())
 	}
@@ -51,10 +55,10 @@ func main() {
 
 func validArgAction(arg_action *string) bool {
 	switch strings.ToLower(*arg_action) {
-	case feature.ACTION_CLEAR,
-		feature.ACTION_DOWNLOAD,
-		feature.ACTION_UPLOAD,
-		feature.ACTION_REMOVE:
+	case actions.ACTION_CLEAR,
+		actions.ACTION_DOWNLOAD,
+		actions.ACTION_UPLOAD,
+		actions.ACTION_REMOVE:
 		return true
 	}
 
