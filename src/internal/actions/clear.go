@@ -7,12 +7,12 @@ import (
 )
 
 func (ac *Action) FeatureClear() error {
-	err := ac.resetChunkCollection()
+	err := repositoryChunkItem.RemoveAll()
 	if err != nil {
 		return err
 	}
 
-	err = ac.resetHashCollection()
+	err = repositoryFile.RemoveAll()
 	if err != nil {
 		return err
 	}
@@ -37,22 +37,6 @@ func (ac *Action) FeatureClear() error {
 		return err
 	}
 
-	return nil
-}
-
-func (ac *Action) resetChunkCollection() error {
-	err := os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), []byte("[]"), 0644)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (ac *Action) resetHashCollection() error {
-	err := os.WriteFile(os.Getenv("JSON_FILE_HASH"), []byte("[]"), 0644)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

@@ -4,38 +4,60 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"lab/src/logger"
-	"lab/src/models"
+	"lab/src/model"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func (ac *Action) FeatureUpload() error {
-	logger.GetLogActivity().WriteLog("Processando HASH do arquivo...")
-
-	err := ac.isNewFile()
+	logger.GetLogActivity().WriteLog("Gerando HASH do arquivo...")
+	err := ac.GenerateHashFile()
 	if err != nil {
 		return err
 	}
 
-	err = ac.addHashToCollection()
+	logger.GetLogActivity().WriteLog("Validando arquivo...")
+	err = ac.isNewFile()
+	if err != nil {
+		return err
+	}
+
+	file := model.File{
+		Hash: ac.Hash,
+		Name: filepath.Base(ac.FileTarget),
+	}
+
+	err = repositoryFile.Create(file)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return fmt.Errorf("erro ao processar o HASH do arquivo")
 	}
 
 	logger.GetLogActivity().WriteLog("Copiando arquivo para pasta temporária...")
-	err = ac.sendFileToTmp()
+	err = ac.SendFileToTmp()
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err
 	}
 
-	logger.GetLogActivity().WriteLog("Processando partes do arquivo...")
-	err = ac.processChunk()
+	logger.GetLogActivity().WriteLog("Gerando chunks do arquivo...")
+	chunkItem, err := ac.GenerateChunkByHashFile(ac.Hash)
+	if err != nil {
+		logger.GetLogError().WriteLog(err.Error())
+	}
+
+	logger.GetLogActivity().WriteLog("Salvando chunks do arquivo...")
+	err = repositoryChunkItem.Create(chunkItem)
+	if err != nil {
+		logger.GetLogError().WriteLog(err.Error())
+		return err
+	}
+
+	err = ac.GenerateChunksFileTmp(chunkItem)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err
@@ -51,32 +73,70 @@ func (ac *Action) FeatureUpload() error {
 	return nil
 }
 
-func (ac *Action) isNewFile() error {
-	err := ac.GenerateHashFile()
+func (ac Action) GenerateChunksFileTmp(chunkItem model.ChunkItem) error {
+	file, err := os.Open(os.Getenv("FOLDER_TMP") + "/" + chunkItem.HashFile)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	jsonHash, err := os.Open(os.Getenv("JSON_FILE_HASH"))
-	if err != nil {
-		return err
-	}
-	defer jsonHash.Close()
+	index := -1
+	buf := make([]byte, chunkItem.Size)
+	for {
+		index++
+		n, err := file.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
 
-	decoder := json.NewDecoder(jsonHash)
-	fileList := []models.File{}
-	err = decoder.Decode(&fileList)
-	if err != nil {
-		return err
-	}
+		if n == 0 {
+			break
+		}
 
-	for _, item := range fileList {
-		if item.Hash == ac.Hash {
-			return fmt.Errorf("arquivo já existe: %s", item.Name)
+		err = ac.saveChunkBin(buf[:n], chunkItem.HashList[index])
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (ac Action) GenerateChunkByHashFile(hashFile string) (model.ChunkItem, error) {
+	file, err := os.Open(os.Getenv("FOLDER_TMP") + "/" + hashFile)
+	if err != nil {
+		return model.ChunkItem{}, err
+	}
+	defer file.Close()
+
+	chunkSizeStr := os.Getenv("CHUNK_SIZE")
+	chunkSize, err := strconv.Atoi(chunkSizeStr)
+	if err != nil {
+		return model.ChunkItem{}, fmt.Errorf("falha na configuração de: Chunk Size")
+	}
+
+	var chunks []string
+	buf := make([]byte, chunkSize)
+	for {
+		n, err := file.Read(buf)
+		if err != nil && err != io.EOF {
+			return model.ChunkItem{}, err
+		}
+
+		if n == 0 {
+			break
+		}
+
+		chunkHash := md5.Sum(buf[:n])
+		chunkHashString := hex.EncodeToString(chunkHash[:])
+		chunks = append(chunks, chunkHashString)
+	}
+
+	chunkModel := model.ChunkItem{}
+	chunkModel.HashFile = hashFile
+	chunkModel.HashList = chunks
+	chunkModel.Size = chunkSize
+	return chunkModel, nil
 }
 
 func (ac *Action) GenerateHashFile() error {
@@ -86,53 +146,16 @@ func (ac *Action) GenerateHashFile() error {
 	}
 	defer file.Close()
 
-	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
+	hashString, err := model.File{}.GenerateHashByOsFile(file)
+	if err != nil {
 		return err
 	}
 
-	hashInBytes := hash.Sum(nil)
-	hashString := hex.EncodeToString(hashInBytes)
 	ac.Hash = hashString
-
 	return nil
 }
 
-func (ac *Action) addHashToCollection() error {
-	jsonHash, err := os.Open(os.Getenv("JSON_FILE_HASH"))
-	if err != nil {
-		return err
-	}
-	defer jsonHash.Close()
-
-	decoder := json.NewDecoder(jsonHash)
-	fileList := []models.File{}
-	err = decoder.Decode(&fileList)
-	if err != nil {
-		return err
-	}
-
-	for _, item := range fileList {
-		if item.Hash == ac.Hash {
-			return fmt.Errorf("arquivo já existe: %s", item.Name)
-		}
-	}
-
-	fileList = append(fileList, models.File{Hash: ac.Hash, Name: filepath.Base(ac.FileTarget)})
-	updatedJSON, err := json.MarshalIndent(fileList, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(os.Getenv("JSON_FILE_HASH"), updatedJSON, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ac *Action) sendFileToTmp() error {
+func (ac *Action) SendFileToTmp() error {
 	sourceFile, err := os.Open(ac.FileTarget)
 	if err != nil {
 		return err
@@ -153,66 +176,16 @@ func (ac *Action) sendFileToTmp() error {
 	return nil
 }
 
-func (ac *Action) processChunk() error {
-	file, err := os.Open(os.Getenv("FOLDER_TMP") + "/" + ac.Hash)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	var chunks []string
-	buf := make([]byte, CHUNK_SIZE)
-	for {
-		n, err := file.Read(buf)
-		if err != nil && err != io.EOF {
-			return err
-		}
-
-		if n == 0 {
-			break
-		}
-
-		chunkHash := md5.Sum(buf[:n])
-		chunkHashString := hex.EncodeToString(chunkHash[:])
-		chunks = append(chunks, chunkHashString)
-
-		err = ac.saveChunkBin(buf[:n], chunkHashString)
-		if err != nil {
-			return err
-		}
+func (ac Action) isNewFile() error {
+	resp, err := repositoryFile.IsExistsByHashFile(ac.Hash)
+	if resp {
+		return fmt.Errorf("arquivo já existe: %s", ac.FileTarget)
 	}
 
-	item := models.ChunkItem{}
-	item.HashFile = ac.Hash
-	item.HashList = chunks
-
-	jsonChunkFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
-	if err != nil {
-		return err
-	}
-	defer jsonChunkFile.Close()
-
-	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []models.ChunkItem{}
-	err = decoder.Decode(&chunkList)
-	if err != nil {
-		return err
-	}
-
-	chunkList = append(chunkList, item)
-	updatedJSON, err := json.MarshalIndent(chunkList, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(os.Getenv("JSON_FILE_CHUNK"), updatedJSON, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
+// @todo Passar esse método para responsabilidade de Service TMP
 func (ac *Action) saveChunkBin(data []byte, hash string) error {
 	file, err := os.Create(fmt.Sprintf("%s/%s.bin", os.Getenv("FOLDER_STORAGE"), hash))
 	if err != nil {
@@ -230,6 +203,7 @@ func (ac *Action) saveChunkBin(data []byte, hash string) error {
 	return nil
 }
 
+// @todo Passar esse método para responsabilidade de Service TMP
 func (ac *Action) removeFileToTmp() error {
 	return os.Remove(fmt.Sprintf("%s/%s", os.Getenv("FOLDER_TMP"), ac.Hash))
 }

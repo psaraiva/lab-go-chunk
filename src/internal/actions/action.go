@@ -1,11 +1,9 @@
 package actions
 
 import (
-	"encoding/json"
-	"fmt"
 	"lab/src/interfaces"
 	"lab/src/logger"
-	"lab/src/models"
+	"lab/src/repository"
 	"os"
 )
 
@@ -14,7 +12,6 @@ const (
 	ACTION_DOWNLOAD = "download"
 	ACTION_REMOVE   = "remove"
 	ACTION_UPLOAD   = "upload"
-	CHUNK_SIZE      = 1 * 1024 // 1Kb
 )
 
 type Action struct {
@@ -23,7 +20,12 @@ type Action struct {
 	Hash       string
 }
 
+var repositoryFile repository.RepositoryFile
+var repositoryChunkItem repository.RepositoryChunkItem
+
 func MakeAction() Action {
+	repositoryFile = repository.MakeRepositoryFile(os.Getenv("ENGINE_COLLECTION_FILE"))
+	repositoryChunkItem = repository.MakeRepositoryChunkItem(os.Getenv("ENGINE_COLLECTION_CHUNK"))
 	return Action{Type: "none", FileTarget: "none", Hash: "none"}
 }
 
@@ -70,52 +72,6 @@ func Execute(action interfaces.ActionBase) error {
 	return nil
 }
 
-func (ac *Action) GetActionType() string {
+func (ac Action) GetActionType() string {
 	return ac.Type
-}
-
-func (ac *Action) getHashByFileName(fileName string) (string, error) {
-	jsonFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
-	if err != nil {
-		return "", err
-	}
-	defer jsonFile.Close()
-
-	decoder := json.NewDecoder(jsonFile)
-	hashList := []models.File{}
-	err = decoder.Decode(&hashList)
-	if err != nil {
-		return "", err
-	}
-
-	for _, item := range hashList {
-		if item.Name == fileName {
-			return item.Hash, nil
-		}
-	}
-
-	return "", fmt.Errorf("arquivo não encontrado")
-}
-
-func (ac *Action) getChunksByHash(hash string) ([]string, error) {
-	jsonChunk, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
-	if err != nil {
-		return nil, err
-	}
-	defer jsonChunk.Close()
-
-	decoder := json.NewDecoder(jsonChunk)
-	chunkList := []models.ChunkItem{}
-	err = decoder.Decode(&chunkList)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, chunk := range chunkList {
-		if chunk.HashFile == hash {
-			return chunk.HashList, nil
-		}
-	}
-
-	return nil, fmt.Errorf("arquivo não encontrado")
 }

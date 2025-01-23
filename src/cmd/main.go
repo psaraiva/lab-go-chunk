@@ -5,15 +5,25 @@ import (
 	"fmt"
 	"lab/src/internal/actions"
 	"lab/src/logger"
+	"lab/src/repository"
+	"os"
 	"strings"
 
 	"github.com/joho/godotenv"
 )
 
+var EngineRepositoryFile = ""
+var EngineRepositoryChunkItem = ""
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
 		panic("Error loading .env file")
+	}
+
+	resp := validConfigRepositorty()
+	if !resp {
+		panic("Error loading engine repository")
 	}
 
 	var action = actions.MakeAction()
@@ -67,4 +77,22 @@ func validArgAction(arg_action *string) bool {
 
 func validArgFileTarget(file_target *string) bool {
 	return len(*file_target) > 1
+}
+
+func validConfigRepositorty() bool {
+	resp_file, resp_chunk_item := false, false
+	EngineRepositoryFile = os.Getenv("ENGINE_COLLECTION_FILE")
+	EngineRepositoryChunkItem = os.Getenv("ENGINE_COLLECTION_CHUNK")
+
+	switch EngineRepositoryFile {
+	case repository.ENGINE_JSON:
+		resp_file = true
+	}
+
+	switch EngineRepositoryChunkItem {
+	case repository.ENGINE_JSON:
+		resp_chunk_item = true
+	}
+
+	return resp_file && resp_chunk_item
 }
