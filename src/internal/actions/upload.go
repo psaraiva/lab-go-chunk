@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"lab/src/logger"
+	"lab/src/models"
 	"os"
 	"path/filepath"
 )
@@ -63,13 +64,13 @@ func (ac *Action) isNewFile() error {
 	defer jsonHash.Close()
 
 	decoder := json.NewDecoder(jsonHash)
-	hashList := []hashItem{}
-	err = decoder.Decode(&hashList)
+	fileList := []models.File{}
+	err = decoder.Decode(&fileList)
 	if err != nil {
 		return err
 	}
 
-	for _, item := range hashList {
+	for _, item := range fileList {
 		if item.Hash == ac.Hash {
 			return fmt.Errorf("arquivo já existe: %s", item.Name)
 		}
@@ -105,20 +106,20 @@ func (ac *Action) addHashToCollection() error {
 	defer jsonHash.Close()
 
 	decoder := json.NewDecoder(jsonHash)
-	hashList := []hashItem{}
-	err = decoder.Decode(&hashList)
+	fileList := []models.File{}
+	err = decoder.Decode(&fileList)
 	if err != nil {
 		return err
 	}
 
-	for _, item := range hashList {
+	for _, item := range fileList {
 		if item.Hash == ac.Hash {
 			return fmt.Errorf("arquivo já existe: %s", item.Name)
 		}
 	}
 
-	hashList = append(hashList, hashItem{Hash: ac.Hash, Name: filepath.Base(ac.FileTarget)})
-	updatedJSON, err := json.MarshalIndent(hashList, "", "  ")
+	fileList = append(fileList, models.File{Hash: ac.Hash, Name: filepath.Base(ac.FileTarget)})
+	updatedJSON, err := json.MarshalIndent(fileList, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -181,9 +182,9 @@ func (ac *Action) processChunk() error {
 		}
 	}
 
-	item := chunkItem{}
+	item := models.ChunkItem{}
 	item.HashFile = ac.Hash
-	item.Chunk = chunks
+	item.HashList = chunks
 
 	jsonChunkFile, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
 	if err != nil {
@@ -192,7 +193,7 @@ func (ac *Action) processChunk() error {
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []chunkItem{}
+	chunkList := []models.ChunkItem{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return err

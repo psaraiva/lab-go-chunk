@@ -3,6 +3,7 @@ package actions
 import (
 	"encoding/json"
 	"lab/src/logger"
+	"lab/src/models"
 	"os"
 )
 
@@ -54,7 +55,7 @@ func (ac *Action) isChunkCanBeRemoved(chunk string) (bool, error) {
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []chunkItem{}
+	chunkList := []models.ChunkItem{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return false, err
@@ -68,10 +69,10 @@ func (ac *Action) isChunkCanBeRemoved(chunk string) (bool, error) {
 	return true, nil
 }
 
-func (ac *Action) getCountChunkMap(chunkList []chunkItem) map[string]int {
+func (ac *Action) getCountChunkMap(chunkList []models.ChunkItem) map[string]int {
 	chunkCount := make(map[string]int)
 	for _, item := range chunkList {
-		for _, value := range item.Chunk {
+		for _, value := range item.HashList {
 			chunkCount[value]++
 		}
 	}
@@ -86,7 +87,7 @@ func (ac *Action) removeHashFileToChunkCollection(hashFile string) error {
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []chunkItem{}
+	chunkList := []models.ChunkItem{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return err
@@ -120,20 +121,20 @@ func (ac *Action) removeHashToCollection(hashString string) error {
 	defer jsonHashFile.Close()
 
 	decoder := json.NewDecoder(jsonHashFile)
-	hashList := []hashItem{}
-	err = decoder.Decode(&hashList)
+	fileList := []models.File{}
+	err = decoder.Decode(&fileList)
 	if err != nil {
 		return err
 	}
 
-	for index, item := range hashList {
+	for index, item := range fileList {
 		if item.Hash == hashString {
-			hashList = append(hashList[:index], hashList[index+1:]...)
+			fileList = append(fileList[:index], fileList[index+1:]...)
 			break
 		}
 	}
 
-	upJSON, err := json.MarshalIndent(hashList, "", "  ")
+	upJSON, err := json.MarshalIndent(fileList, "", "  ")
 	if err != nil {
 		return err
 	}

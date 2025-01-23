@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lab/src/interfaces"
 	"lab/src/logger"
+	"lab/src/models"
 	"os"
 )
 
@@ -20,16 +21,6 @@ type Action struct {
 	Type       string
 	FileTarget string
 	Hash       string
-}
-
-type hashItem struct {
-	Hash string
-	Name string
-}
-
-type chunkItem struct {
-	HashFile string
-	Chunk    []string
 }
 
 func MakeAction() Action {
@@ -91,7 +82,7 @@ func (ac *Action) getHashByFileName(fileName string) (string, error) {
 	defer jsonFile.Close()
 
 	decoder := json.NewDecoder(jsonFile)
-	hashList := []hashItem{}
+	hashList := []models.File{}
 	err = decoder.Decode(&hashList)
 	if err != nil {
 		return "", err
@@ -114,15 +105,15 @@ func (ac *Action) getChunksByHash(hash string) ([]string, error) {
 	defer jsonChunk.Close()
 
 	decoder := json.NewDecoder(jsonChunk)
-	chunkList := []chunkItem{}
+	chunkList := []models.ChunkItem{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, item := range chunkList {
-		if item.HashFile == hash {
-			return item.Chunk, nil
+	for _, chunk := range chunkList {
+		if chunk.HashFile == hash {
+			return chunk.HashList, nil
 		}
 	}
 
