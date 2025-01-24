@@ -1,6 +1,6 @@
 package interfaces
 
-type ActionBase interface {
+type ServiceAction interface {
 	FeatureUpload() error
 	FeatureDownload() error
 	FeatureRemove() error

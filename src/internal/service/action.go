@@ -1,4 +1,4 @@
-package actions
+package service
 
 import (
 	"lab/src/interfaces"
@@ -21,15 +21,24 @@ type Action struct {
 }
 
 var repositoryFile repository.RepositoryFile
-var repositoryChunkItem repository.RepositoryChunkItem
+var repositoryChunk repository.RepositoryChunk
+var serviceTemporaryArea interfaces.ServiceTemporaryArea
+var serviceStorage interfaces.ServiceStorage
 
 func MakeAction() Action {
 	repositoryFile = repository.MakeRepositoryFile(os.Getenv("ENGINE_COLLECTION_FILE"))
-	repositoryChunkItem = repository.MakeRepositoryChunkItem(os.Getenv("ENGINE_COLLECTION_CHUNK"))
-	return Action{Type: "none", FileTarget: "none", Hash: "none"}
+	repositoryChunk = repository.MakeRepositoryChunk(os.Getenv("ENGINE_COLLECTION_CHUNK"))
+	serviceTemporaryArea = MakeServiceTemporaryArea()
+	serviceStorage = MakeServiceStorage()
+
+	return Action{
+		Type:       "none",
+		FileTarget: "none",
+		Hash:       "none",
+	}
 }
 
-func Execute(action interfaces.ActionBase) error {
+func Execute(action interfaces.ServiceAction) error {
 	switch action.GetActionType() {
 	case ACTION_CLEAR:
 		logger.GetLogActivity().WriteLog("Iniciando rotina de limpeza.")

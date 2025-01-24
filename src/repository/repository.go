@@ -10,20 +10,20 @@ const (
 )
 
 type RepositoryFile interface {
-	Create(file model.File) error
-	GetHashByFileName(fileName string) (string, error)
-	IsExistsByHashFile(hashFile string) (bool, error)
+	Create(model.File) error
+	GetHashByFileName(string) (string, error)
+	IsExistsByHashFile(string) (bool, error)
 	RemoveAll() error
-	RemoveByHashFile(hashFile string) error
+	RemoveByHashFile(string) error
 }
 
-type RepositoryChunkItem interface {
-	Create(model.ChunkItem) error
-	GetChunkHashListByHashFile(hashFile string) ([]string, error)
-	GetCountChunkMap(chunkList []model.ChunkItem) map[string]int
-	IsChunkCanBeRemoved(chunk string) (bool, error)
+type RepositoryChunk interface {
+	Create(model.Chunk) error
+	GetChunkHashListByHashOriginalFile(string) ([]string, error)
+	GetCountChunkMap([]model.Chunk) map[string]int
+	IsChunkCanBeRemoved(string) (bool, error)
 	RemoveAll() error
-	RemoveByHashFile(hashFile string) error
+	RemoveByHashOriginalFile(string) error
 }
 
 func MakeRepositoryFile(engine string) RepositoryFile {
@@ -31,13 +31,13 @@ func MakeRepositoryFile(engine string) RepositoryFile {
 		return RepositoryFileJson{}
 	}
 
-	panic("Invalid engine to repository file" + engine)
+	panic("Invalid engine to repository file: " + engine)
 }
 
-func MakeRepositoryChunkItem(engine string) RepositoryChunkItem {
+func MakeRepositoryChunk(engine string) RepositoryChunkJson {
 	if ENGINE_JSON == engine {
-		return RepositoryChunkItemJson{}
+		return RepositoryChunkJson{}
 	}
 
-	panic("Invalid engine to repository chunk item, " + engine)
+	panic("Invalid engine to repository chunk: " + engine)
 }

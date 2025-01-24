@@ -10,7 +10,7 @@ import (
 type RepositoryFileJson struct{}
 
 func (rfj RepositoryFileJson) Create(file model.File) error {
-	jsonHash, err := os.Open(os.Getenv("JSON_FILE_HASH"))
+	jsonHash, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func (rfj RepositoryFileJson) Create(file model.File) error {
 		return err
 	}
 
-	err = os.WriteFile(os.Getenv("JSON_FILE_HASH"), updatedJSON, 0644)
+	err = os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), updatedJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (rfj RepositoryFileJson) Create(file model.File) error {
 }
 
 func (rfj RepositoryFileJson) GetHashByFileName(fileName string) (string, error) {
-	jsonFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
+	jsonFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +67,7 @@ func (rfj RepositoryFileJson) GetHashByFileName(fileName string) (string, error)
 }
 
 func (rfj RepositoryFileJson) IsExistsByHashFile(hashFile string) (bool, error) {
-	jsonHash, err := os.Open(os.Getenv("JSON_FILE_HASH"))
+	jsonHash, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return false, err
 	}
@@ -90,7 +90,7 @@ func (rfj RepositoryFileJson) IsExistsByHashFile(hashFile string) (bool, error) 
 }
 
 func (rfj RepositoryFileJson) RemoveByHashFile(hashFile string) error {
-	jsonHashFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
+	jsonHashFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (rfj RepositoryFileJson) RemoveByHashFile(hashFile string) error {
 		return err
 	}
 
-	err = os.WriteFile(os.Getenv("JSON_FILE_HASH"), upJSON, 0644)
+	err = os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), upJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (rfj RepositoryFileJson) RemoveByHashFile(hashFile string) error {
 }
 
 func (rfj RepositoryFileJson) RemoveAll() error {
-	err := os.WriteFile(os.Getenv("JSON_FILE_HASH"), []byte("[]"), 0644)
+	err := os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), []byte("[]"), 0644)
 	if err != nil {
 		return err
 	}

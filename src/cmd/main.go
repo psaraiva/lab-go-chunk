@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"lab/src/internal/actions"
+	"lab/src/internal/service"
 	"lab/src/logger"
 	"lab/src/repository"
 	"os"
@@ -13,7 +13,7 @@ import (
 )
 
 var EngineRepositoryFile = ""
-var EngineRepositoryChunkItem = ""
+var EngineRepositoryChunk = ""
 
 func main() {
 	err := godotenv.Load()
@@ -21,20 +21,21 @@ func main() {
 		panic("Error loading .env file")
 	}
 
-	resp := validConfigRepositorty()
+	resp := isValidConfigRepositorty()
 	if !resp {
-		panic("Error loading engine repository")
+		fmt.Println("Error loading engine repository")
+		return
 	}
 
-	var action = actions.MakeAction()
-
 	logger.LogSetConfig()
-	var logActive = logger.GetLogActivity()
+	var serviceAction = service.MakeAction()
 
 	println("Iniciando aplicação...")
-	err = logActive.WriteLog("Iniciando aplicação...")
+	err = logger.GetLogActivity().WriteLog("Iniciando aplicação...")
 	if err != nil {
-		panic("Não foi possível iniciar log de atividades, aplicação será encerrada")
+		logger.GetLogError().WriteLog(err.Error())
+		fmt.Println("Não foi possível iniciar log de atividades, aplicação será encerrada")
+		return
 	}
 
 	arg_action := flag.String("action", "", "Action to invoke (upload/download/remove/clear)")
@@ -42,54 +43,56 @@ func main() {
 
 	flag.Parse()
 
-	if !validArgAction(arg_action) {
-		fmt.Println("Invalid action:", *arg_action)
+	if !isValidArgAction(arg_action) {
+		logger.GetLogError().WriteLog(fmt.Errorf("invalid value of action: %s", *arg_action).Error())
+		fmt.Println("Invalid value of action:", *arg_action)
 		return
 	}
 
-	if *arg_action != actions.ACTION_CLEAR && !validArgFileTarget(arg_file_target) {
-		fmt.Println("Invalid target:", arg_file_target)
+	if *arg_action != service.ACTION_CLEAR && !isValidArgFileTarget(arg_file_target) {
+		logger.GetLogError().WriteLog(fmt.Errorf("invalid value of file-target: %s", *arg_file_target).Error())
+		fmt.Println("Invalid value of file-target:", *arg_file_target)
 		return
 	}
 
-	action.Type = *arg_action
-	action.FileTarget = *arg_file_target
-	err = actions.Execute(&action)
+	serviceAction.Type = *arg_action
+	serviceAction.FileTarget = *arg_file_target
+	err = service.Execute(&serviceAction)
 	if err != nil {
 		println(err.Error())
 	}
 
-	logActive.WriteLog("Finalizando aplicação...")
+	logger.GetLogActivity().WriteLog("Finalizando aplicação...")
 	println("Finalizando aplicação...")
 }
 
-func validArgAction(arg_action *string) bool {
+func isValidArgAction(arg_action *string) bool {
 	switch strings.ToLower(*arg_action) {
-	case actions.ACTION_CLEAR,
-		actions.ACTION_DOWNLOAD,
-		actions.ACTION_UPLOAD,
-		actions.ACTION_REMOVE:
+	case service.ACTION_CLEAR,
+		service.ACTION_DOWNLOAD,
+		service.ACTION_UPLOAD,
+		service.ACTION_REMOVE:
 		return true
 	}
 
 	return false
 }
 
-func validArgFileTarget(file_target *string) bool {
+func isValidArgFileTarget(file_target *string) bool {
 	return len(*file_target) > 1
 }
 
-func validConfigRepositorty() bool {
+func isValidConfigRepositorty() bool {
 	resp_file, resp_chunk_item := false, false
 	EngineRepositoryFile = os.Getenv("ENGINE_COLLECTION_FILE")
-	EngineRepositoryChunkItem = os.Getenv("ENGINE_COLLECTION_CHUNK")
+	EngineRepositoryChunk = os.Getenv("ENGINE_COLLECTION_CHUNK")
 
 	switch EngineRepositoryFile {
 	case repository.ENGINE_JSON:
 		resp_file = true
 	}
 
-	switch EngineRepositoryChunkItem {
+	switch EngineRepositoryChunk {
 	case repository.ENGINE_JSON:
 		resp_chunk_item = true
 	}

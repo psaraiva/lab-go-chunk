@@ -1,8 +1,7 @@
-package actions
+package service
 
 import (
 	"crypto/md5"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -37,34 +36,35 @@ func (ac *Action) FeatureUpload() error {
 		return fmt.Errorf("erro ao processar o HASH do arquivo")
 	}
 
-	logger.GetLogActivity().WriteLog("Copiando arquivo para pasta temporária...")
+	logger.GetLogActivity().WriteLog("Copiando arquivo original para área temporária...")
 	err = ac.SendFileToTmp()
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err
 	}
 
-	logger.GetLogActivity().WriteLog("Gerando chunks do arquivo...")
-	chunkItem, err := ac.GenerateChunkByHashFile(ac.Hash)
+	logger.GetLogActivity().WriteLog("Gerando chunks do arquivo original em memória...")
+	chunk, err := ac.GenerateChunkByHashFile(ac.Hash)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 	}
 
-	logger.GetLogActivity().WriteLog("Salvando chunks do arquivo...")
-	err = repositoryChunkItem.Create(chunkItem)
-	if err != nil {
-		logger.GetLogError().WriteLog(err.Error())
-		return err
-	}
-
-	err = ac.GenerateChunksFileTmp(chunkItem)
+	logger.GetLogActivity().WriteLog("Salvando coleção de chunk...")
+	err = repositoryChunk.Create(chunk)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err
 	}
 
-	logger.GetLogActivity().WriteLog("Removendo arquivo temporário...")
-	err = ac.removeFileToTmp()
+	logger.GetLogActivity().WriteLog("Gerando arquivos chunks .bin em storage...")
+	err = ac.GenerateChunksToStorage(chunk)
+	if err != nil {
+		logger.GetLogError().WriteLog(err.Error())
+		return err
+	}
+
+	logger.GetLogActivity().WriteLog("Removendo arquivo original da área temporária...")
+	err = serviceTemporaryArea.RemoveFile(ac.Hash)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err
@@ -73,15 +73,15 @@ func (ac *Action) FeatureUpload() error {
 	return nil
 }
 
-func (ac Action) GenerateChunksFileTmp(chunkItem model.ChunkItem) error {
-	file, err := os.Open(os.Getenv("FOLDER_TMP") + "/" + chunkItem.HashFile)
+func (ac Action) GenerateChunksToStorage(chunk model.Chunk) error {
+	file, err := serviceTemporaryArea.GetFile(chunk.HashOriginalFile)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
 	index := -1
-	buf := make([]byte, chunkItem.Size)
+	buf := make([]byte, chunk.Size)
 	for {
 		index++
 		n, err := file.Read(buf)
@@ -93,7 +93,7 @@ func (ac Action) GenerateChunksFileTmp(chunkItem model.ChunkItem) error {
 			break
 		}
 
-		err = ac.saveChunkBin(buf[:n], chunkItem.HashList[index])
+		err = serviceStorage.CreateFile(buf[:n], chunk.HashList[index]+".bin")
 		if err != nil {
 			return err
 		}
@@ -102,17 +102,18 @@ func (ac Action) GenerateChunksFileTmp(chunkItem model.ChunkItem) error {
 	return nil
 }
 
-func (ac Action) GenerateChunkByHashFile(hashFile string) (model.ChunkItem, error) {
-	file, err := os.Open(os.Getenv("FOLDER_TMP") + "/" + hashFile)
+func (ac Action) GenerateChunkByHashFile(hashFile string) (model.Chunk, error) {
+	chunk := model.Chunk{}
+	file, err := serviceTemporaryArea.GetFile(hashFile)
 	if err != nil {
-		return model.ChunkItem{}, err
+		return chunk, err
 	}
 	defer file.Close()
 
 	chunkSizeStr := os.Getenv("CHUNK_SIZE")
 	chunkSize, err := strconv.Atoi(chunkSizeStr)
 	if err != nil {
-		return model.ChunkItem{}, fmt.Errorf("falha na configuração de: Chunk Size")
+		return chunk, fmt.Errorf("falha na configuração de: Chunk Size")
 	}
 
 	var chunks []string
@@ -120,7 +121,7 @@ func (ac Action) GenerateChunkByHashFile(hashFile string) (model.ChunkItem, erro
 	for {
 		n, err := file.Read(buf)
 		if err != nil && err != io.EOF {
-			return model.ChunkItem{}, err
+			return chunk, err
 		}
 
 		if n == 0 {
@@ -132,11 +133,10 @@ func (ac Action) GenerateChunkByHashFile(hashFile string) (model.ChunkItem, erro
 		chunks = append(chunks, chunkHashString)
 	}
 
-	chunkModel := model.ChunkItem{}
-	chunkModel.HashFile = hashFile
-	chunkModel.HashList = chunks
-	chunkModel.Size = chunkSize
-	return chunkModel, nil
+	chunk.HashOriginalFile = hashFile
+	chunk.HashList = chunks
+	chunk.Size = chunkSize
+	return chunk, nil
 }
 
 func (ac *Action) GenerateHashFile() error {
@@ -146,34 +146,22 @@ func (ac *Action) GenerateHashFile() error {
 	}
 	defer file.Close()
 
-	hashString, err := model.File{}.GenerateHashByOsFile(file)
+	hash, err := model.File{}.GenerateHashByOsFile(file)
 	if err != nil {
 		return err
 	}
 
-	ac.Hash = hashString
+	ac.Hash = hash
 	return nil
 }
 
 func (ac *Action) SendFileToTmp() error {
-	sourceFile, err := os.Open(ac.FileTarget)
+	source, err := os.Open(ac.FileTarget)
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
-
-	destinationFile, err := os.Create(os.Getenv("FOLDER_TMP") + "/" + ac.Hash)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	_, err = io.Copy(destinationFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	defer source.Close()
+	return serviceTemporaryArea.CreateFileByFileSource(ac.Hash, source)
 }
 
 func (ac Action) isNewFile() error {
@@ -183,27 +171,4 @@ func (ac Action) isNewFile() error {
 	}
 
 	return err
-}
-
-// @todo Passar esse método para responsabilidade de Service TMP
-func (ac *Action) saveChunkBin(data []byte, hash string) error {
-	file, err := os.Create(fmt.Sprintf("%s/%s.bin", os.Getenv("FOLDER_STORAGE"), hash))
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	for _, value := range data {
-		err = binary.Write(file, binary.LittleEndian, value)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// @todo Passar esse método para responsabilidade de Service TMP
-func (ac *Action) removeFileToTmp() error {
-	return os.Remove(fmt.Sprintf("%s/%s", os.Getenv("FOLDER_TMP"), ac.Hash))
 }

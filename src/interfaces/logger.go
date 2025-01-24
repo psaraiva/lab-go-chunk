@@ -3,7 +3,7 @@ package interfaces
 type LogUnified interface {
 	LogError
 	LogActivity
-	ClearLog
+	Clear
 }
 
 type LogError interface {
@@ -14,6 +14,6 @@ type LogActivity interface {
 	WriteLogMessageInfo(msg string) error
 }
 
-type ClearLog interface {
-	ClearLog() error
+type Clear interface {
+	Clear() error
 }

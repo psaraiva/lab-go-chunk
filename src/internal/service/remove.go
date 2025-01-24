@@ -1,25 +1,24 @@
-package actions
+package service
 
 import (
 	"lab/src/logger"
-	"os"
 )
 
 func (ac *Action) FeatureRemove() error {
 	logger.GetLogActivity().WriteLog("Carregando Hash do arquivo...")
-	hashFile, err := repositoryFile.GetHashByFileName(ac.FileTarget)
+	hashOriginalFile, err := repositoryFile.GetHashByFileName(ac.FileTarget)
 	if err != nil {
 		return err
 	}
 
 	logger.GetLogActivity().WriteLog("Carregando lista de chunk do arquivo...")
-	list, err := repositoryChunkItem.GetChunkHashListByHashFile(hashFile)
+	list, err := repositoryChunk.GetChunkHashListByHashOriginalFile(hashOriginalFile)
 	if err != nil {
 		return err
 	}
 
 	for _, hashChunk := range list {
-		flag, err := repositoryChunkItem.IsChunkCanBeRemoved(hashChunk)
+		flag, err := repositoryChunk.IsChunkCanBeRemoved(hashChunk)
 		if err != nil {
 			return err
 		}
@@ -29,18 +28,18 @@ func (ac *Action) FeatureRemove() error {
 		}
 
 		logger.GetLogActivity().WriteLog("Removendo chunk: " + hashChunk + ".bin")
-		err = os.Remove(os.Getenv("FOLDER_STORAGE") + "/" + hashChunk + ".bin")
+		err = serviceStorage.RemoveFile(hashChunk + ".bin")
 		if err != nil {
 			return err
 		}
 	}
 
 	logger.GetLogActivity().WriteLog("Removendo registro do arquivo de chunk...")
-	err = repositoryFile.RemoveByHashFile(hashFile)
+	err = repositoryFile.RemoveByHashFile(hashOriginalFile)
 	if err != nil {
 		return err
 	}
 
 	logger.GetLogActivity().WriteLog("Removendo registro do arquivo de hash...")
-	return repositoryChunkItem.RemoveByHashFile(hashFile)
+	return repositoryChunk.RemoveByHashOriginalFile(hashOriginalFile)
 }

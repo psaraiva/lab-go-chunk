@@ -21,7 +21,7 @@ func LogSetConfig() {
 }
 
 func GetLogActivity() *Log {
-	return &Log{logType: LOG_TYPE_ACTIVE, file: os.Getenv("LOG_FILE_ACTIVE")}
+	return &Log{logType: LOG_TYPE_ACTIVE, file: os.Getenv("LOG_FILE_ACTIVITY")}
 }
 
 func GetLogError() *Log {
@@ -55,7 +55,7 @@ func (l *Log) clearLogError() error {
 }
 
 func (l *Log) clearLogActivity() error {
-	file, err := os.OpenFile(os.Getenv("LOG_FILE_ACTIVE"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
+	file, err := os.OpenFile(os.Getenv("LOG_FILE_ACTIVITY"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		return fmt.Errorf("falha ao abrir arquivo de log de atividade")
 	}
@@ -78,7 +78,7 @@ func (l *Log) WriteLogMessageError(msg string) error {
 }
 
 func (l *Log) WriteLogMessageInfo(msg string) error {
-	file, err := os.OpenFile(os.Getenv("LOG_FILE_ACTIVE"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile(os.Getenv("LOG_FILE_ACTIVITY"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return fmt.Errorf("não foi possível escrever mensagem de informação, arquivo não encontrado")
 	}
@@ -87,7 +87,7 @@ func (l *Log) WriteLogMessageInfo(msg string) error {
 	return nil
 }
 
-func (l *Log) ClearLog() error {
+func (l *Log) Clear() error {
 	if l.logType == LOG_TYPE_ACTIVE {
 		l.clearLogError()
 		return nil
