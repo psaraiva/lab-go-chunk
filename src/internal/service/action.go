@@ -1,10 +1,9 @@
-package actions
+package service
 
 import (
-	"encoding/json"
-	"fmt"
 	"lab/src/interfaces"
 	"lab/src/logger"
+	"lab/src/repository"
 	"os"
 )
 
@@ -13,7 +12,6 @@ const (
 	ACTION_DOWNLOAD = "download"
 	ACTION_REMOVE   = "remove"
 	ACTION_UPLOAD   = "upload"
-	CHUNK_SIZE      = 1 * 1024 // 1Kb
 )
 
 type Action struct {
@@ -22,21 +20,25 @@ type Action struct {
 	Hash       string
 }
 
-type hashItem struct {
-	Hash string
-	Name string
-}
-
-type chunkItem struct {
-	HashFile string
-	Chunk    []string
-}
+var repositoryFile repository.RepositoryFile
+var repositoryChunk repository.RepositoryChunk
+var serviceTemporaryArea interfaces.ServiceTemporaryArea
+var serviceStorage interfaces.ServiceStorage
 
 func MakeAction() Action {
-	return Action{Type: "none", FileTarget: "none", Hash: "none"}
+	repositoryFile = repository.MakeRepositoryFile(os.Getenv("ENGINE_COLLECTION_FILE"))
+	repositoryChunk = repository.MakeRepositoryChunk(os.Getenv("ENGINE_COLLECTION_CHUNK"))
+	serviceTemporaryArea = MakeServiceTemporaryArea()
+	serviceStorage = MakeServiceStorage()
+
+	return Action{
+		Type:       "none",
+		FileTarget: "none",
+		Hash:       "none",
+	}
 }
 
-func Execute(action interfaces.ActionBase) error {
+func Execute(action interfaces.ServiceAction) error {
 	switch action.GetActionType() {
 	case ACTION_CLEAR:
 		logger.GetLogActivity().WriteLog("Iniciando rotina de limpeza.")
@@ -79,52 +81,6 @@ func Execute(action interfaces.ActionBase) error {
 	return nil
 }
 
-func (ac *Action) GetActionType() string {
+func (ac Action) GetActionType() string {
 	return ac.Type
-}
-
-func (ac *Action) getHashByFileName(fileName string) (string, error) {
-	jsonFile, err := os.Open(os.Getenv("JSON_FILE_HASH"))
-	if err != nil {
-		return "", err
-	}
-	defer jsonFile.Close()
-
-	decoder := json.NewDecoder(jsonFile)
-	hashList := []hashItem{}
-	err = decoder.Decode(&hashList)
-	if err != nil {
-		return "", err
-	}
-
-	for _, item := range hashList {
-		if item.Name == fileName {
-			return item.Hash, nil
-		}
-	}
-
-	return "", fmt.Errorf("arquivo não encontrado")
-}
-
-func (ac *Action) getChunksByHash(hash string) ([]string, error) {
-	jsonChunk, err := os.Open(os.Getenv("JSON_FILE_CHUNK"))
-	if err != nil {
-		return nil, err
-	}
-	defer jsonChunk.Close()
-
-	decoder := json.NewDecoder(jsonChunk)
-	chunkList := []chunkItem{}
-	err = decoder.Decode(&chunkList)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, item := range chunkList {
-		if item.HashFile == hash {
-			return item.Chunk, nil
-		}
-	}
-
-	return nil, fmt.Errorf("arquivo não encontrado")
 }

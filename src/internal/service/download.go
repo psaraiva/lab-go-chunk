@@ -1,4 +1,4 @@
-package actions
+package service
 
 import (
 	"io"
@@ -8,22 +8,22 @@ import (
 
 func (ac *Action) FeatureDownload() error {
 	logger.GetLogActivity().WriteLog("Carregando Hash do arquivo...")
-	hash, err := ac.getHashByFileName(ac.FileTarget)
+	hashOriginalFile, err := repositoryFile.GetHashByFileName(ac.FileTarget)
 	if err != nil {
 		return err
 	}
 
 	logger.GetLogActivity().WriteLog("Carregando lista de chunk do arquivo...")
-	list, err := ac.getChunksByHash(hash)
+	list, err := repositoryChunk.GetChunkHashListByHashOriginalFile(hashOriginalFile)
 	if err != nil {
 		return err
 	}
 
 	logger.GetLogActivity().WriteLog("Gerando arquivo final...")
-	return ac.generateFileByChunks(list, "")
+	return ac.generateFileByChunkHashList(list, "")
 }
 
-func (ac *Action) generateFileByChunks(chunks []string, targetFolder string) error {
+func (ac *Action) generateFileByChunkHashList(chunks []string, targetFolder string) error {
 	out, err := os.Create(targetFolder + ac.FileTarget)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (ac *Action) generateFileByChunks(chunks []string, targetFolder string) err
 	defer out.Close()
 
 	for _, file := range chunks {
-		in, err := os.Open(os.Getenv("FOLDER_STORAGE") + "/" + file + ".bin")
+		in, err := serviceStorage.GetFile(file + ".bin")
 		if err != nil {
 			return err
 		}
