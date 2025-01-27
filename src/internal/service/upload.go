@@ -30,7 +30,7 @@ func (ac *Action) FeatureUpload() error {
 		Name: filepath.Base(ac.FileTarget),
 	}
 
-	err = repositoryFile.Create(file)
+	_, err = repositoryFile.Create(file)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return fmt.Errorf("erro ao processar o HASH do arquivo")
@@ -50,7 +50,7 @@ func (ac *Action) FeatureUpload() error {
 	}
 
 	logger.GetLogActivity().WriteLog("Salvando coleção de chunk...")
-	err = repositoryChunk.Create(chunk)
+	_, err = repositoryChunk.Create(chunk)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err

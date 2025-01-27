@@ -26,8 +26,8 @@ var serviceTemporaryArea interfaces.ServiceTemporaryArea
 var serviceStorage interfaces.ServiceStorage
 
 func MakeAction() Action {
-	repositoryFile = repository.MakeRepositoryFile(os.Getenv("ENGINE_COLLECTION_FILE"))
-	repositoryChunk = repository.MakeRepositoryChunk(os.Getenv("ENGINE_COLLECTION_CHUNK"))
+	repositoryFile = repository.MakeRepositoryFile(os.Getenv("ENGINE_COLLECTION"))
+	repositoryChunk = repository.MakeRepositoryChunk(os.Getenv("ENGINE_COLLECTION"))
 	serviceTemporaryArea = MakeServiceTemporaryArea()
 	serviceStorage = MakeServiceStorage()
 

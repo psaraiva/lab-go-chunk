@@ -14,7 +14,7 @@ type Chunk struct {
 	Size             int
 }
 
-func (ci Chunk) GenerateChunkByOsFile(hashFile string, chunkSize int, file *os.File) (Chunk, error) {
+func (c Chunk) GenerateChunkByOsFile(hashFile string, chunkSize int, file *os.File) (Chunk, error) {
 	defer file.Close()
 	chunk := Chunk{}
 
@@ -34,7 +34,7 @@ func (ci Chunk) GenerateChunkByOsFile(hashFile string, chunkSize int, file *os.F
 			break
 		}
 
-		chunks = append(chunks, ci.GenerateHash(buf, n))
+		chunks = append(chunks, c.GenerateHash(buf, n))
 	}
 
 	chunk.HashOriginalFile = hashFile
@@ -43,11 +43,11 @@ func (ci Chunk) GenerateChunkByOsFile(hashFile string, chunkSize int, file *os.F
 	return chunk, nil
 }
 
-func (ci Chunk) GenerateHash(buf []byte, ref int) string {
-	return ci.generateHashMd5(buf, ref)
+func (c Chunk) GenerateHash(buf []byte, ref int) string {
+	return c.generateHashMd5(buf, ref)
 }
 
-func (ci Chunk) generateHashMd5(buf []byte, ref int) string {
+func (c Chunk) generateHashMd5(buf []byte, ref int) string {
 	chunkHash := md5.Sum(buf[:ref])
 	return hex.EncodeToString(chunkHash[:])
 }
