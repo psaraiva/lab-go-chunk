@@ -8,7 +8,7 @@ import (
 
 func (ac *Action) FeatureDownload() error {
 	logger.GetLogActivity().WriteLog("Carregando Hash do arquivo...")
-	hashOriginalFile, err := repositoryFile.GetHashByFileName(ac.FileTarget)
+	hashOriginalFile, err := repositoryFile.GetHashByName(ac.FileTarget)
 	if err != nil {
 		return err
 	}

@@ -44,7 +44,7 @@ func (rfj RepositoryFileJson) Create(file model.File) (int64, error) {
 	return id, nil
 }
 
-func (rfj RepositoryFileJson) GetHashByFileName(fileName string) (string, error) {
+func (rfj RepositoryFileJson) GetHashByName(name string) (string, error) {
 	jsonFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return "", err
@@ -59,7 +59,7 @@ func (rfj RepositoryFileJson) GetHashByFileName(fileName string) (string, error)
 	}
 
 	for _, item := range hashList {
-		if item.Name == fileName {
+		if item.Name == name {
 			return item.Hash, nil
 		}
 	}

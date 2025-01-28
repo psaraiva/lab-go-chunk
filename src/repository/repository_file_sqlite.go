@@ -22,21 +22,21 @@ func (rfs RepositoryFileSqlite) Create(file model.File) (int64, error) {
 	return id, err
 }
 
-func (rfs RepositoryFileSqlite) GetHashByFileName(fileName string) (string, error) {
-	var name string
+func (rfs RepositoryFileSqlite) GetHashByName(name string) (string, error) {
+	var fileName string
 	db, err := getConectionSqlite()
 	if err != nil {
-		return name, err
+		return fileName, err
 	}
 	defer db.Close()
 
 	query := `SELECT hash FROM files WHERE name = ?`
-	err = db.QueryRow(query, fileName).Scan(&name)
+	err = db.QueryRow(query, name).Scan(&fileName)
 	if err == sql.ErrNoRows {
-		return name, nil
+		return fileName, nil
 	}
 
-	return name, err
+	return fileName, err
 }
 
 func (rfs RepositoryFileSqlite) IsExistsByHashFile(hashFile string) (bool, error) {

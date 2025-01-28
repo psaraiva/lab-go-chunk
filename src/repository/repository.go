@@ -13,7 +13,7 @@ const (
 
 type RepositoryFile interface {
 	Create(model.File) (int64, error)
-	GetHashByFileName(string) (string, error)
+	GetHashByName(string) (string, error)
 	IsExistsByHashFile(string) (bool, error)
 	RemoveAll() error
 	RemoveByHashFile(string) error

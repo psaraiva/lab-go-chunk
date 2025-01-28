@@ -7,7 +7,7 @@ import (
 
 func (ac *Action) FeatureRemove() error {
 	logger.GetLogActivity().WriteLog("Obtendo Hash do arquivo...")
-	hashOriginalFile, err := repositoryFile.GetHashByFileName(ac.FileTarget)
+	hashOriginalFile, err := repositoryFile.GetHashByName(ac.FileTarget)
 	if err != nil {
 		return err
 	}

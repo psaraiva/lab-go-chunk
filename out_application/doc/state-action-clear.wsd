@@ -1,12 +1,12 @@
 @startuml
 state action : "Clear"
-state "step1" as s1: "reset chunk collection"
+state "step1" as s1: "Repository Chunk: RemoveAll"
 note "Action: Clear" as n1
-state "step2" as s2: "reset hash collection"
-state "step3" as s3: "clean storage"
-state "step4" as s4: "clean tmp"
-state "step5" as s5: "clean log error"
-state "step6" as s6: "clean log activity"
+state "step2" as s2: "Repository File: RemoveAll"
+state "step3" as s3: "Service Storage: Clear"
+state "step4" as s4: "Service Temporary Area: Clear"
+state "step5" as s5: "Log Error: Clear"
+state "step6" as s6: "Log Activity: Clear"
 state "end" as e0 <<end>>
 state "end" as e1 <<end>>
 state "end" as e2 <<end>>

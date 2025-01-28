@@ -8,19 +8,24 @@ package "Aplication" {
         folder "out_application"{
             folder "Log"
             note bottom of "Log" : error.log\nactivity.log
-            folder "Collection"
-            note bottom of "Collection" : hash.json\nchunk.json
             folder "Storage"
             note bottom of "Storage" : *.bin
             folder "tmp_file"
             note bottom of "tmp_file" : *
             folder "input_file_examples"
             note bottom of "input_file_examples" : *.txt
+            folder "collection"{
+                folder "Json"
+                note bottom of "Json" : hash.json\nchunk.json
+                database "SQLite" {
+                    [db.collectiondata_base]
+                }
+            }
         }
     }
 }
 
-[Collection] <--> [App]
+[collection] <--> [App]
 [App] --> [Log]
 [App] <--> [Storage]
 [App] <--> [tmp_file]
