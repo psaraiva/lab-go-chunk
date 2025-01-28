@@ -34,24 +34,30 @@ func main() {
 	err = logger.GetLogActivity().WriteLog("Iniciando aplicação...")
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
-		fmt.Println("Não foi possível iniciar log de atividades, aplicação será encerrada")
+		fmt.Println("Não foi possível iniciar log de atividades, aplicação será encerrada.")
+		println("Finalizando aplicação...")
 		return
 	}
 
+	logger.GetLogActivity().WriteLog("ENGINE COLLECTION: " + os.Getenv("ENGINE_COLLECTION") + ".")
+
 	arg_action := flag.String("action", "", "Action to invoke (upload/download/remove/clear)")
 	arg_file_target := flag.String("file-target", "", "File target to action")
-
 	flag.Parse()
 
 	if !isValidArgAction(arg_action) {
 		logger.GetLogError().WriteLog(fmt.Errorf("invalid value of action: %s", *arg_action).Error())
 		fmt.Println("Invalid value of action:", *arg_action)
+		logger.GetLogActivity().WriteLog("Finalizando aplicação...")
+		println("Finalizando aplicação...")
 		return
 	}
 
 	if *arg_action != service.ACTION_CLEAR && !isValidArgFileTarget(arg_file_target) {
 		logger.GetLogError().WriteLog(fmt.Errorf("invalid value of file-target: %s", *arg_file_target).Error())
 		fmt.Println("Invalid value of file-target:", *arg_file_target)
+		logger.GetLogActivity().WriteLog("Finalizando aplicação...")
+		println("Finalizando aplicação...")
 		return
 	}
 
@@ -83,19 +89,11 @@ func isValidArgFileTarget(file_target *string) bool {
 }
 
 func isValidConfigRepositorty() bool {
-	resp_file, resp_chunk_item := false, false
-	EngineRepositoryFile = os.Getenv("ENGINE_COLLECTION_FILE")
-	EngineRepositoryChunk = os.Getenv("ENGINE_COLLECTION_CHUNK")
-
-	switch EngineRepositoryFile {
-	case repository.ENGINE_JSON:
-		resp_file = true
+	switch os.Getenv("ENGINE_COLLECTION") {
+	case repository.ENGINE_JSON,
+		repository.ENGINE_SQLITE:
+		return true
 	}
 
-	switch EngineRepositoryChunk {
-	case repository.ENGINE_JSON:
-		resp_chunk_item = true
-	}
-
-	return resp_file && resp_chunk_item
+	return false
 }

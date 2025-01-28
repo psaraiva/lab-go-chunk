@@ -1,0 +1,31 @@
+@startuml
+
+entity "files" as eFiles {
+  *id: number <<generated>>
+  --
+  name: text
+  hash: text
+}
+
+entity "chunks" as eChunks {
+  *id: number <<generated>>
+  --
+  size: number
+  file_id: number <<FK>>
+}
+
+entity "chunks_has_chunk_hashes" as eChunksChunkHashes {
+  *chunk_id: number <<FK>>
+  *chunk_hash_id: number <<FK>>
+}
+
+entity "chunk_hashes" as eChunkHashes {
+  *id: number <<generated>>
+  --
+  hash: text
+}
+
+eFiles ||..|| eChunks
+eChunks ||..|{ eChunksChunkHashes
+eChunkHashes ||..|{ eChunksChunkHashes
+@enduml

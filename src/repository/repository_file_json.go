@@ -9,10 +9,11 @@ import (
 
 type RepositoryFileJson struct{}
 
-func (rfj RepositoryFileJson) Create(file model.File) error {
+func (rfj RepositoryFileJson) Create(file model.File) (int64, error) {
+	var id int64
 	jsonHash, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
-		return err
+		return id, err
 	}
 	defer jsonHash.Close()
 
@@ -20,30 +21,30 @@ func (rfj RepositoryFileJson) Create(file model.File) error {
 	fileList := []model.File{}
 	err = decoder.Decode(&fileList)
 	if err != nil {
-		return err
+		return id, err
 	}
 
 	for _, item := range fileList {
 		if item.Hash == file.Hash {
-			return fmt.Errorf("arquivo já existe: %s", item.Name)
+			return id, fmt.Errorf("arquivo já existe: %s", item.Name)
 		}
 	}
 
 	fileList = append(fileList, model.File{Hash: file.Hash, Name: file.Name})
 	updatedJSON, err := json.MarshalIndent(fileList, "", "  ")
 	if err != nil {
-		return err
+		return id, err
 	}
 
 	err = os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), updatedJSON, 0644)
 	if err != nil {
-		return err
+		return id, err
 	}
 
-	return nil
+	return id, nil
 }
 
-func (rfj RepositoryFileJson) GetHashByFileName(fileName string) (string, error) {
+func (rfj RepositoryFileJson) GetHashByName(name string) (string, error) {
 	jsonFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return "", err
@@ -58,7 +59,7 @@ func (rfj RepositoryFileJson) GetHashByFileName(fileName string) (string, error)
 	}
 
 	for _, item := range hashList {
-		if item.Name == fileName {
+		if item.Name == name {
 			return item.Hash, nil
 		}
 	}

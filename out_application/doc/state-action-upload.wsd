@@ -1,22 +1,31 @@
 @startuml
 state action : "upload"
-state "step1" as s1: "is new file"
+state "step1" as s1: "Generate Hash File"
 note "Action: Upload File" as n1
-state "step2" as s2: "add hash to collection"
-state "step3" as s3: "send file to tmp"
-state "step4" as s4: "process chunk"
-state "step5" as s5: "remove file to tmp"
+state "step2" as s2: "Is NewFile"
+state "step3" as s3: "Repository File: Create"
+state "step4" as s4: "Send File To Tmp"
+state "step5" as s5: "Generate Chunk By Hash File"
+state "step6" as s6: "Repository Chunk: Create"
+state "step7" as s7: "Generate Chunks To Storage"
+state "step8" as s8: "Service Temporary Area: RemoveFile"
 state "end" as e0 <<end>>
 state "end" as e1 <<end>>
 state "end" as e2 <<end>>
 state "end" as e3 <<end>>
 state "end" as e4 <<end>>
 state "end" as e5 <<end>>
+state "end" as e6 <<end>>
+state "end" as e7 <<end>>
+state "end" as e8 <<end>>
 state "choice" as c1 <<choice>>
 state "choice" as c2 <<choice>>
 state "choice" as c3 <<choice>>
 state "choice" as c4 <<choice>>
 state "choice" as c5 <<choice>>
+state "choice" as c6 <<choice>>
+state "choice" as c7 <<choice>>
+state "choice" as c8 <<choice>>
 
 [*] --> action : input params
 action --> s1
@@ -38,5 +47,18 @@ c4 --> s5
 
 s5 --> c5 : error?
 c5 --> e5: error message
-c5 --> e0: success message
+c5 --> s6
+
+s6 --> c6 : error?
+c6 --> e6: error message
+c6 --> s7
+
+s7 --> c7 : error?
+c7 --> e7: error message
+c7 --> s8
+
+s8 --> c8 : error?
+c8 --> e8: error message
+c8 --> e0: success message
+
 @enduml

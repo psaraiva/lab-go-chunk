@@ -1,9 +1,9 @@
 @startuml
 state action : "download"
-state "step1" as s1: "get hash by file name"
+state "step1" as s1: "Repository File: Get Hash By File Name"
 note "Action: Download File" as n1
-state "step2" as s2: "get chunks by hash"
-state "step3" as s3: "generate file by chunks"
+state "step2" as s2: "Repository Chunk: Get Chunk Hash List By Hash Original File"
+state "step3" as s3: "Generate File By Chunk Hash List"
 state "end" as e0 <<end>>
 state "end" as e1 <<end>>
 state "end" as e2 <<end>>

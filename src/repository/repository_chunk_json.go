@@ -9,10 +9,11 @@ import (
 
 type RepositoryChunkJson struct{}
 
-func (rcij RepositoryChunkJson) Create(chunk model.Chunk) error {
+func (rcj RepositoryChunkJson) Create(chunk model.Chunk) (int64, error) {
+	var id int64
 	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
 	if err != nil {
-		return err
+		return id, err
 	}
 	defer jsonChunkFile.Close()
 
@@ -20,24 +21,24 @@ func (rcij RepositoryChunkJson) Create(chunk model.Chunk) error {
 	chunkList := []model.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
-		return err
+		return id, err
 	}
 
 	chunkList = append(chunkList, chunk)
 	updatedJSON, err := json.MarshalIndent(chunkList, "", "  ")
 	if err != nil {
-		return err
+		return id, err
 	}
 
 	err = os.WriteFile(os.Getenv("COLLECTION_JSON_CHUNK"), updatedJSON, 0644)
 	if err != nil {
-		return err
+		return id, err
 	}
 
-	return nil
+	return id, nil
 }
 
-func (rcij RepositoryChunkJson) GetChunkHashListByHashOriginalFile(hashOriginalFile string) ([]string, error) {
+func (rcj RepositoryChunkJson) GetChunkHashListByHashOriginalFile(hashOriginalFile string) ([]string, error) {
 	jsonChunk, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
 	if err != nil {
 		return nil, err
@@ -60,9 +61,8 @@ func (rcij RepositoryChunkJson) GetChunkHashListByHashOriginalFile(hashOriginalF
 	return nil, fmt.Errorf("arquivo não encontrado")
 }
 
-// @WARNING, verificar o uso desse método nas demais implementações de repositoryChunk...
-func (rcij RepositoryChunkJson) GetCountChunkMap(chunkList []model.Chunk) map[string]int {
-	chunkCount := make(map[string]int)
+func (rcj RepositoryChunkJson) getCountChunkMap(chunkList []model.Chunk) map[string]int64 {
+	chunkCount := make(map[string]int64)
 	for _, item := range chunkList {
 		for _, value := range item.HashList {
 			chunkCount[value]++
@@ -71,10 +71,10 @@ func (rcij RepositoryChunkJson) GetCountChunkMap(chunkList []model.Chunk) map[st
 	return chunkCount
 }
 
-func (rcij RepositoryChunkJson) IsChunkCanBeRemoved(chunk string) (bool, error) {
+func (rcj RepositoryChunkJson) CountChunkHash(hash string) (int64, error) {
 	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	defer jsonChunkFile.Close()
 
@@ -82,18 +82,14 @@ func (rcij RepositoryChunkJson) IsChunkCanBeRemoved(chunk string) (bool, error) 
 	chunkList := []model.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 
-	countList := rcij.GetCountChunkMap(chunkList)
-	if countList[chunk] > 1 {
-		return false, nil
-	}
-
-	return true, nil
+	countList := rcj.getCountChunkMap(chunkList)
+	return countList[hash], nil
 }
 
-func (rcij RepositoryChunkJson) RemoveAll() error {
+func (rcj RepositoryChunkJson) RemoveAll() error {
 	err := os.WriteFile(os.Getenv("COLLECTION_JSON_CHUNK"), []byte("[]"), 0644)
 	if err != nil {
 		return err
@@ -101,10 +97,11 @@ func (rcij RepositoryChunkJson) RemoveAll() error {
 	return nil
 }
 
-func (rcij RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string) error {
+func (rcj RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string) ([]string, error) {
+	var hashList []string
 	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
 	if err != nil {
-		return err
+		return hashList, err
 	}
 	defer jsonChunkFile.Close()
 
@@ -112,11 +109,13 @@ func (rcij RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string
 	chunkList := []model.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
-		return err
+		return hashList, err
 	}
 
+	chunkTarget := model.Chunk{}
 	for index, item := range chunkList {
 		if item.HashOriginalFile == hashOriginalFile {
+			chunkTarget = chunkList[index]
 			chunkList = append(chunkList[:index], chunkList[index+1:]...)
 			break
 		}
@@ -124,13 +123,34 @@ func (rcij RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string
 
 	upJSON, err := json.MarshalIndent(chunkList, "", "  ")
 	if err != nil {
-		return err
+		return hashList, err
 	}
 
 	err = os.WriteFile(os.Getenv("COLLECTION_JSON_CHUNK"), upJSON, 0644)
 	if err != nil {
-		return err
+		return hashList, err
 	}
 
-	return nil
+	for _, hash := range chunkTarget.HashList {
+		reps, err := rcj.isChunkHashCanBeRemoved(hash)
+		if err != nil {
+			return hashList, err
+		}
+
+		if !reps {
+			continue
+		}
+
+		hashList = append(hashList, hash)
+	}
+
+	return hashList, nil
+}
+
+func (rcj RepositoryChunkJson) isChunkHashCanBeRemoved(hash string) (bool, error) {
+	total, err := rcj.CountChunkHash(hash)
+	if err != nil {
+		return false, err
+	}
+	return total == 0, nil
 }
