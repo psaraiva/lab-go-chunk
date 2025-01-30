@@ -1,0 +1,31 @@
+FROM golang:1.23.4-alpine
+
+# Instalar ferramentas adicionais
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+    git \
+    sqlite \
+    gcc \
+    musl-dev
+
+# Definir o diretório de trabalho dentro do contêiner
+WORKDIR /app
+
+# Copiar os arquivos go.mod e go.sum e baixar as dependências
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copiar o código-fonte para o contêiner
+COPY ./src ./src
+
+# Copiar o pastar auxiliadoras para o contêiner
+COPY ./out_application ./out_application
+
+# Definir variáveis de ambiente para habilitar CGO e compilar o binário
+ENV CGO_ENABLED=1
+ENV GOOS=linux
+ENV GOARCH=amd64
+
+# Definir o comando padrão para manter o contêiner ativo
+CMD ["sh"]

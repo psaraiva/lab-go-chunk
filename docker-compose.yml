@@ -1,0 +1,14 @@
+services:
+  app:
+    container_name: lab-go-chunk-cli-dev
+    build:
+      context: .
+      dockerfile: ./Docker/go-develop/DockerFile
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      - GO_ENV=development
+    stdin_open: true
+    tty: true

@@ -16,7 +16,7 @@ var EngineRepositoryFile = ""
 var EngineRepositoryChunk = ""
 
 func main() {
-	err := godotenv.Load()
+	err := godotenv.Load("src/.env")
 	if err != nil {
 		panic("Error loading .env file")
 	}
