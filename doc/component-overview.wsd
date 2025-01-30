@@ -2,7 +2,7 @@
 skinparam BackgroundColor white
 skinparam componentStyle uml2
 
-package "Aplication" {
+package "Container" {
     component "Disk Application" {
         [App]
         folder "out_application"{
@@ -18,7 +18,7 @@ package "Aplication" {
                 folder "Json"
                 note bottom of "Json" : hash.json\nchunk.json
                 database "SQLite" {
-                    [db.collectiondata_base]
+                    [data_base.db]
                 }
             }
         }
