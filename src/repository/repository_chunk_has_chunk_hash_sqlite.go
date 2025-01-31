@@ -5,8 +5,8 @@ import "database/sql"
 type RepositoryChunkHasChunkHashSqlite struct{}
 
 func (rchchs RepositoryChunkHasChunkHashSqlite) Create(chunkId int64, chunkHashId int64, tx *sql.Tx) error {
-	query := `INSERT INTO chunks_has_chunk_hashes (chunk_id, chunk_hash_id) VALUES (?, ?)`
-	_, err := tx.Exec(query, chunkId, chunkHashId)
+	dml := `INSERT INTO chunks_has_chunk_hashes (chunk_id, chunk_hash_id) VALUES (?, ?)`
+	_, err := tx.Exec(dml, chunkId, chunkHashId)
 	return err
 }
 
@@ -68,8 +68,8 @@ func (rchchs RepositoryChunkHasChunkHashSqlite) GetChunkHashIdsByChunkId(chunkId
 	}
 	defer db.Close()
 
-	query := `SELECT chunk_hash_id FROM chunks_has_chunk_hashes WHERE chunk_id = ?`
-	rows, err := db.Query(query, chunkId)
+	dml := `SELECT chunk_hash_id FROM chunks_has_chunk_hashes WHERE chunk_id = ?`
+	rows, err := db.Query(dml, chunkId)
 	if err == sql.ErrNoRows {
 		return ids, nil
 	}

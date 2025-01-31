@@ -18,12 +18,12 @@ func (rfs RepositoryFileSqlite) Create(file model.File) (int64, error) {
 	}
 	defer db.Close()
 
-	query := `INSERT INTO files (name, hash) VALUES (?, ?) RETURNING id`
-	err = db.QueryRow(query, file.Name, file.Hash).Scan(&id)
+	dml := `INSERT INTO files (name, hash) VALUES (?, ?) RETURNING id`
+	err = db.QueryRow(dml, file.Name, file.Hash).Scan(&id)
 	return id, err
 }
 
-// @WARNING: ALTEREÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
+// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rfs RepositoryFileSqlite) GetHashByName(name string) (string, error) {
 	var fileName string
 	db, err := getConectionSqlite()
@@ -32,8 +32,8 @@ func (rfs RepositoryFileSqlite) GetHashByName(name string) (string, error) {
 	}
 	defer db.Close()
 
-	query := `SELECT hash FROM files WHERE name = ?`
-	err = db.QueryRow(query, name).Scan(&fileName)
+	dml := `SELECT hash FROM files WHERE name = ?`
+	err = db.QueryRow(dml, name).Scan(&fileName)
 	if err == sql.ErrNoRows {
 		return fileName, errors.New("record not found")
 	}
@@ -49,8 +49,8 @@ func (rfs RepositoryFileSqlite) IsExistsByHash(hash string) (bool, error) {
 	defer db.Close()
 
 	var count int
-	query := `SELECT COUNT(id) FROM files WHERE hash = ?`
-	err = db.QueryRow(query, hash).Scan(&count)
+	dml := `SELECT COUNT(id) FROM files WHERE hash = ?`
+	err = db.QueryRow(dml, hash).Scan(&count)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
@@ -62,7 +62,7 @@ func (rfs RepositoryFileSqlite) IsExistsByHash(hash string) (bool, error) {
 	return count > 0, nil
 }
 
-// @WARNING: ALTEREÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
+// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rfs RepositoryFileSqlite) RemoveByHash(hash string) error {
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -101,7 +101,7 @@ func (rfs RepositoryFileSqlite) RemoveAll() error {
 	return nil
 }
 
-// @WARNING: ALTEREÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
+// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rfs RepositoryFileSqlite) GetIdByHash(hash string) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
@@ -110,8 +110,8 @@ func (rfs RepositoryFileSqlite) GetIdByHash(hash string) (int64, error) {
 	}
 	defer db.Close()
 
-	query := `SELECT id FROM files WHERE hash = ?`
-	err = db.QueryRow(query, hash).Scan(&id)
+	dml := `SELECT id FROM files WHERE hash = ?`
+	err = db.QueryRow(dml, hash).Scan(&id)
 	if err == sql.ErrNoRows {
 		return id, errors.New("record not found")
 	}
@@ -132,8 +132,8 @@ func (rfs RepositoryFileSqlite) resetTable() error {
 	}
 
 	var count int
-	query := `SELECT COUNT(id) FROM files`
-	err = db.QueryRow(query).Scan(&count)
+	dml := `SELECT COUNT(id) FROM files`
+	err = db.QueryRow(dml).Scan(&count)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -154,8 +154,8 @@ func (rfs RepositoryFileSqlite) resetAutoIncrement() error {
 	}
 
 	var seq int
-	query := `SELECT seq FROM sqlite_sequence WHERE name='files'`
-	err = db.QueryRow(query).Scan(&seq)
+	dml := `SELECT seq FROM sqlite_sequence WHERE name='files'`
+	err = db.QueryRow(dml).Scan(&seq)
 	if err == sql.ErrNoRows {
 		return nil
 	}

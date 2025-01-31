@@ -71,7 +71,7 @@ func (rcj RepositoryChunkJson) getCountChunkMap(chunkList []model.Chunk) map[str
 	return chunkCount
 }
 
-func (rcj RepositoryChunkJson) CountChunkHash(hash string) (int64, error) {
+func (rcj RepositoryChunkJson) CountUsedChunkHash(hash string) (int64, error) {
 	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
 	if err != nil {
 		return 0, err
@@ -148,7 +148,7 @@ func (rcj RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string)
 }
 
 func (rcj RepositoryChunkJson) isChunkHashCanBeRemoved(hash string) (bool, error) {
-	total, err := rcj.CountChunkHash(hash)
+	total, err := rcj.CountUsedChunkHash(hash)
 	if err != nil {
 		return false, err
 	}

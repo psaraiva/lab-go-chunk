@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS chunks_has_chunk_hashes (
+CREATE TABLE chunks_has_chunk_hashes (
     chunk_id INTEGER NOT NULL,
     chunk_hash_id INTEGER NOT NULL,
     PRIMARY KEY (chunk_id, chunk_hash_id),

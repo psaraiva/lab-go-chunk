@@ -20,7 +20,7 @@ type RepositoryFile interface {
 }
 
 type RepositoryChunk interface {
-	CountChunkHash(string) (int64, error)
+	CountUsedChunkHash(string) (int64, error)
 	Create(model.Chunk) (int64, error)
 	GetChunkHashListByHashOriginalFile(string) ([]string, error)
 	RemoveAll() error

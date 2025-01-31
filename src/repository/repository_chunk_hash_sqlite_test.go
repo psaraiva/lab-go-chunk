@@ -20,15 +20,15 @@ func setUpRepostoryChunkHashSqliteTestDB(t *testing.T) (*sql.DB, RepositoryChunk
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	createTableQuery := `
-    CREATE TABLE IF NOT EXISTS chunk_hashes (
+	ddl := `
+    CREATE TABLE chunk_hashes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         hash TEXT NOT NULL UNIQUE
     )`
 
-	_, err = db.Exec(createTableQuery)
+	_, err = db.Exec(ddl)
 	if err != nil {
-		t.Fatalf("Failed to create chunk hashes table: %v", err)
+		t.Fatalf("Failed to create table chunk_hashes: %v", err)
 	}
 
 	return db, RepositoryChunkHashSqlite{}
@@ -37,7 +37,7 @@ func setUpRepostoryChunkHashSqliteTestDB(t *testing.T) (*sql.DB, RepositoryChunk
 func setDownRepostoryChunkHashSqliteTestDB(t *testing.T, db *sql.DB) {
 	_, err := db.Exec(`DROP TABLE chunk_hashes`)
 	if err != nil {
-		t.Fatalf("Failed to drop chunk hashes table: %v", err)
+		t.Fatalf("Failed to drop table chunk_hashes: %v", err)
 	}
 
 	db.Close()
@@ -57,7 +57,7 @@ func TestRepostoryChunkHashSqliteCreate(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	id, err := repo.Create("5f5adedeea13569a610a771521f66274", tx)
+	id, err := repo.Create("123ABC", tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -77,7 +77,7 @@ func TestRepostoryChunkHashSqliteCreateUniqueConstraintHash(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	hash := "5f5adedeea13569a610a771521f66274"
+	hash := "12ABC456"
 	_, err = repo.Create(hash, tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -100,13 +100,16 @@ func TestRepostoryChunkHashSqliteGetIdByHash(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	hash := "5f5adedeea13569a610a771521f66274"
+	hash := "123789ABC"
 	expectedId, err := repo.Create(hash, tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
 
 	id, err := repo.GetIdByHash(hash)
 	if err != nil {
@@ -122,21 +125,8 @@ func TestRepostoryChunkHashSqliteGetIdByHashNotFound(t *testing.T) {
 	db, repo := setUpRepostoryChunkHashSqliteTestDB(t)
 	defer setDownRepostoryChunkHashSqliteTestDB(t, db)
 
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-	defer tx.Rollback()
-
-	_, err = repo.Create("5f5adedeea13569a610a771521f66274", tx)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	tx.Commit()
-
+	_, err := repo.GetIdByHash("ABC123456")
 	expected := errors.New("record not found")
-	_, err = repo.GetIdByHash("test")
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
@@ -152,7 +142,7 @@ func TestRepostoryChunkHashSqliteGetHashById(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	expected := "5f5adedeea13569a610a771521f66274"
+	expected := "ABC123DEF"
 	id, err := repo.Create(expected, tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -174,21 +164,8 @@ func TestRepostoryChunkHashSqliteGetHashByIdNotFound(t *testing.T) {
 	db, repo := setUpRepostoryChunkHashSqliteTestDB(t)
 	defer setDownRepostoryChunkHashSqliteTestDB(t, db)
 
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-	defer tx.Rollback()
-
-	_, err = repo.Create("5f5adedeea13569a610a771521f66274", tx)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	tx.Commit()
-
 	expected := errors.New("record not found")
-	_, err = repo.GetHashById(10)
+	_, err := repo.GetHashById(7777)
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
@@ -204,12 +181,12 @@ func TestRepostoryChunkHashSqliteRemoveAllWithTransaction(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	_, err = repo.Create("5f5adedeea13569a610a771521f66274", tx)
+	_, err = repo.Create("ABC123", tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create("69e13300af627698d1b16901d82a28ce", tx)
+	_, err = repo.Create("123456789ABCDEFG", tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -250,7 +227,7 @@ func TestRepostoryChunkHashSqliteRemoveAllWithTransaction(t *testing.T) {
 	tx.Rollback()
 }
 
-func TestRepostoryChunkHashSqliteRemoveByChunkHashIds(t *testing.T) {
+func TestRepostoryChunkHashSqliteRemoveByChunkHashWithTransactionIds(t *testing.T) {
 	db, repo := setUpRepostoryChunkHashSqliteTestDB(t)
 	defer setDownRepostoryChunkHashSqliteTestDB(t, db)
 
@@ -260,12 +237,12 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashIds(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	id1, err := repo.Create("5f5adedeea13569a610a771521f66274", tx)
+	id1, err := repo.Create("ABC123", tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	id2, err := repo.Create("69e13300af627698d1b16901d82a28ce", tx)
+	id2, err := repo.Create("ABC456789123DEF", tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -278,7 +255,7 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashIds(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	err = repo.RemoveByIds(ids, tx)
+	err = repo.RemoveByIdsWithTransaction(ids, tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -297,7 +274,7 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashIds(t *testing.T) {
 	}
 }
 
-func TestRepostoryChunkHashSqliteRemoveByChunkHashIdsNotFound(t *testing.T) {
+func TestRepostoryChunkHashSqliteRemoveByChunkHashIdsWithTransactionNotFound(t *testing.T) {
 	db, repo := setUpRepostoryChunkHashSqliteTestDB(t)
 	defer setDownRepostoryChunkHashSqliteTestDB(t, db)
 
@@ -307,15 +284,15 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashIdsNotFound(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	ids := []int64{10}
-	err = repo.RemoveByIds(ids, tx)
+	ids := []int64{7777}
+	err = repo.RemoveByIdsWithTransaction(ids, tx)
 	expected := errors.New("record not found")
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
 }
 
-func TestRepostoryChunkHashSqliteRemoveByChunkHashId(t *testing.T) {
+func TestRepostoryChunkHashSqliteRemoveByChunkHashIdWithTransaction(t *testing.T) {
 	db, repo := setUpRepostoryChunkHashSqliteTestDB(t)
 	defer setDownRepostoryChunkHashSqliteTestDB(t, db)
 
@@ -325,7 +302,7 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashId(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	id, err := repo.Create("5f5adedeea13569a610a771521f66274", tx)
+	id, err := repo.Create("ABC123456", tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -336,21 +313,21 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashId(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	err = repo.RemoveById(id, tx)
+	err = repo.RemoveByIdWithTransaction(id, tx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	tx.Commit()
 
-	expected := errors.New("record not found")
 	_, err = repo.GetHashById(id)
+	expected := errors.New("record not found")
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
 }
 
-func TestRepostoryChunkHashSqliteRemoveByChunkHashIdNotFound(t *testing.T) {
+func TestRepostoryChunkHashSqliteRemoveByChunkHashIdWithTransactionNotFound(t *testing.T) {
 	db, repo := setUpRepostoryChunkHashSqliteTestDB(t)
 	defer setDownRepostoryChunkHashSqliteTestDB(t, db)
 
@@ -360,7 +337,7 @@ func TestRepostoryChunkHashSqliteRemoveByChunkHashIdNotFound(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	err = repo.RemoveById(10, tx)
+	err = repo.RemoveByIdWithTransaction(7777, tx)
 	expected := errors.New("record not found")
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)

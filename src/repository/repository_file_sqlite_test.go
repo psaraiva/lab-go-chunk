@@ -22,16 +22,16 @@ func setUpRepositoryFileSqliteTestDB(t *testing.T) (*sql.DB, RepositoryFileSqlit
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	createTableQuery := `
-    CREATE TABLE IF NOT EXISTS files (
+	ddl := `
+    CREATE TABLE files (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
         hash TEXT NOT NULL UNIQUE
     )`
 
-	_, err = db.Exec(createTableQuery)
+	_, err = db.Exec(ddl)
 	if err != nil {
-		t.Fatalf("Failed to create file table: %v", err)
+		t.Fatalf("Failed to create table files: %v", err)
 	}
 
 	return db, RepositoryFileSqlite{}
@@ -40,7 +40,7 @@ func setUpRepositoryFileSqliteTestDB(t *testing.T) (*sql.DB, RepositoryFileSqlit
 func setDownRepositoryFileSqliteTestDB(t *testing.T, db *sql.DB) {
 	_, err := db.Exec(`DROP TABLE files`)
 	if err != nil {
-		t.Fatalf("Failed to drop files table: %v", err)
+		t.Fatalf("Failed to drop table files: %v", err)
 	}
 
 	db.Close()
@@ -54,8 +54,11 @@ func TestRepositoryFileSqliteFileCreate(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	id, err := repo.Create(file)
+	id, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: "123ABC456DEF789"},
+	)
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -69,11 +72,19 @@ func TestRepositoryFileSqliteCreateUniqueConstraintName(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, _ = repo.Create(file)
+	_, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: "ABC123",
+	})
 
-	file = model.File{Name: "test.txt", Hash: "69e13300af627698d1b16901d82a28ce"}
-	_, err := repo.Create(file)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	_, err = repo.Create(model.File{
+		Name: "test.txt",
+		Hash: "123456789ABC",
+	})
 
 	expected := errors.New("UNIQUE constraint failed: files.name")
 	if err.Error() != expected.Error() {
@@ -85,11 +96,19 @@ func TestRepositoryFileSqliteCreateUniqueConstraintHash(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "testA.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, _ = repo.Create(file)
+	_, err := repo.Create(model.File{
+		Name: "test_a.txt",
+		Hash: "123ABC456",
+	})
 
-	file = model.File{Name: "testB.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	_, err = repo.Create(model.File{
+		Name: "test_b.txt",
+		Hash: "123ABC456",
+	})
 
 	expected := errors.New("UNIQUE constraint failed: files.hash")
 	if err.Error() != expected.Error() {
@@ -101,20 +120,25 @@ func TestRepositoryFileSqliteGetHashByName(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	expected := "5f5adedeea13569a610a771521f66274"
-	file := model.File{Name: "test.txt", Hash: expected}
-	_, err := repo.Create(file)
+	expectedName := "test.txt"
+	expectedHash := "123ABC"
+
+	_, err := repo.Create(model.File{
+		Name: expectedName,
+		Hash: expectedHash,
+	})
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	hash, err := repo.GetHashByName(file.Name)
+	hash, err := repo.GetHashByName(expectedName)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if hash != expected {
-		t.Fatalf("Expected hash '%s', got %s", expected, hash)
+	if hash != expectedHash {
+		t.Fatalf("Expected hash '%s', got %s", expectedHash, hash)
 	}
 }
 
@@ -122,14 +146,18 @@ func TestRepositoryFileSqliteGetHashByNameNotFound(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
+	hash := "ABC123"
+	_, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: hash,
+	})
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
+	_, err = repo.GetHashByName(hash)
 	expected := errors.New("record not found")
-	_, err = repo.GetHashByName(file.Hash)
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
@@ -139,13 +167,17 @@ func TestRepositoryFileSqliteIsExistsByHash(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
+	hash := "ABC123"
+	_, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: hash,
+	})
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	exists, err := repo.IsExistsByHash(file.Hash)
+	exists, err := repo.IsExistsByHash(hash)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -159,13 +191,17 @@ func TestRepositoryFileSqliteIsExistsByHashNotFound(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
+	name := "test.txt"
+	_, err := repo.Create(model.File{
+		Name: name,
+		Hash: "5f5adedeea13569a610a771521f66274",
+	})
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	exists, err := repo.IsExistsByHash(file.Name)
+	exists, err := repo.IsExistsByHash(name)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -179,18 +215,22 @@ func TestRepositoryFileSqliteRemoveByHash(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
+	hash := "ABCDEF123456"
+	_, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: hash,
+	})
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	err = repo.RemoveByHash(file.Hash)
+	err = repo.RemoveByHash(hash)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	exists, err := repo.IsExistsByHash(file.Hash)
+	exists, err := repo.IsExistsByHash(hash)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -204,14 +244,17 @@ func TestRepositoryFileSqliteRemoveByHashNotFound(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
+	_, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: "ABCDEF123456"},
+	)
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
+	err = repo.RemoveByHash("123ABC456")
 	expected := errors.New("record not found")
-	err = repo.RemoveByHash(file.Name)
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
@@ -221,14 +264,20 @@ func TestRepositoryFileSqliteRemoveAll(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file1 := model.File{Name: "test_a.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file1)
+	_, err := repo.Create(model.File{
+		Name: "test_a.txt",
+		Hash: "5f5adedeea13569a610a771521f66274"},
+	)
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	file2 := model.File{Name: "test_b.txt", Hash: "69e13300af627698d1b16901d82a28ce"}
-	_, err = repo.Create(file2)
+	_, err = repo.Create(model.File{
+		Name: "test_b.txt",
+		Hash: "69e13300af627698d1b16901d82a28ce"},
+	)
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -245,7 +294,7 @@ func TestRepositoryFileSqliteRemoveAll(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if count > 0 {
+	if count != 0 {
 		t.Fatalf("Expected no rows, got %v", count)
 	}
 
@@ -261,13 +310,17 @@ func TestRepositoryFileSqliteGetIdByHash(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	expectedId, err := repo.Create(file)
+	hash := "ABCDEF123456"
+	expectedId, err := repo.Create(model.File{
+		Name: "test.txt",
+		Hash: hash},
+	)
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	id, err := repo.GetIdByHash(file.Hash)
+	id, err := repo.GetIdByHash(hash)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -281,14 +334,8 @@ func TestRepositoryFileSqliteGetIdByHashNotFound(t *testing.T) {
 	db, repo := setUpRepositoryFileSqliteTestDB(t)
 	defer setDownRepositoryFileSqliteTestDB(t, db)
 
-	file := model.File{Name: "test.txt", Hash: "5f5adedeea13569a610a771521f66274"}
-	_, err := repo.Create(file)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
+	_, err := repo.GetIdByHash("test.txt")
 	expected := errors.New("record not found")
-	_, err = repo.GetIdByHash(file.Name)
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
