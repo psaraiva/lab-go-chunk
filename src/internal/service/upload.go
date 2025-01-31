@@ -165,7 +165,7 @@ func (ac *Action) SendFileToTmp() error {
 }
 
 func (ac Action) isNewFile() error {
-	resp, err := repositoryFile.IsExistsByHashFile(ac.Hash)
+	resp, err := repositoryFile.IsExistsByHash(ac.Hash)
 	if resp {
 		return fmt.Errorf("arquivo já existe: %s", ac.FileTarget)
 	}

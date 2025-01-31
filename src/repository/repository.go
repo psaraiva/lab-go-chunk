@@ -14,9 +14,9 @@ const (
 type RepositoryFile interface {
 	Create(model.File) (int64, error)
 	GetHashByName(string) (string, error)
-	IsExistsByHashFile(string) (bool, error)
+	IsExistsByHash(string) (bool, error)
 	RemoveAll() error
-	RemoveByHashFile(string) error
+	RemoveByHash(string) error
 }
 
 type RepositoryChunk interface {
@@ -60,6 +60,9 @@ func getConectionSqlite() (*sql.DB, error) {
 		return nil, err
 	}
 
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0)
 	return db, ping(db)
 }
 

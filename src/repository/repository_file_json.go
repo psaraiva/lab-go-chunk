@@ -67,7 +67,7 @@ func (rfj RepositoryFileJson) GetHashByName(name string) (string, error) {
 	return "", fmt.Errorf("arquivo não encontrado")
 }
 
-func (rfj RepositoryFileJson) IsExistsByHashFile(hashFile string) (bool, error) {
+func (rfj RepositoryFileJson) IsExistsByHash(hash string) (bool, error) {
 	jsonHash, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return false, err
@@ -82,7 +82,7 @@ func (rfj RepositoryFileJson) IsExistsByHashFile(hashFile string) (bool, error) 
 	}
 
 	for _, item := range fileList {
-		if item.Hash == hashFile {
+		if item.Hash == hash {
 			return true, nil
 		}
 	}
@@ -90,7 +90,7 @@ func (rfj RepositoryFileJson) IsExistsByHashFile(hashFile string) (bool, error) 
 	return false, nil
 }
 
-func (rfj RepositoryFileJson) RemoveByHashFile(hashFile string) error {
+func (rfj RepositoryFileJson) RemoveByHash(hash string) error {
 	jsonHashFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (rfj RepositoryFileJson) RemoveByHashFile(hashFile string) error {
 	}
 
 	for index, item := range fileList {
-		if item.Hash == hashFile {
+		if item.Hash == hash {
 			fileList = append(fileList[:index], fileList[index+1:]...)
 			break
 		}

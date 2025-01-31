@@ -6,7 +6,9 @@ import (
 	"lab/src/model"
 )
 
-type RepositoryChunkSqlite struct{}
+type RepositoryChunkSqlite struct {
+	DB *sql.DB
+}
 
 func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
 	var id int64
@@ -16,7 +18,7 @@ func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
 	}
 	defer db.Close()
 
-	fileId, err := RepositoryFileSqlite{}.GetIdByHashFile(chunk.HashOriginalFile)
+	fileId, err := RepositoryFileSqlite{}.GetIdByHash(chunk.HashOriginalFile)
 	if err != nil {
 		return id, fmt.Errorf("falha ao buscar id do arquivo: %v", err)
 	}
@@ -76,7 +78,7 @@ func (rcs RepositoryChunkSqlite) GetChunkHashListByHashOriginalFile(hashOriginal
 	}
 	defer db.Close()
 
-	fileId, err := RepositoryFileSqlite{}.GetIdByHashFile(hashOriginalFile)
+	fileId, err := RepositoryFileSqlite{}.GetIdByHash(hashOriginalFile)
 	if err != nil {
 		return hashList, fmt.Errorf("falha ao buscar id do arquivo: %v", err)
 	}
@@ -148,17 +150,17 @@ func (rcs RepositoryChunkSqlite) RemoveAll() error {
 	}
 	defer tx.Rollback()
 
-	err = RepositoryChunkHasChunkHashSqlite{}.RemoveAll(tx)
+	err = RepositoryChunkHasChunkHashSqlite{}.RemoveAllWithTransaction(tx)
 	if err != nil {
 		return err
 	}
 
-	err = RepositoryChunkHashSqlite{}.RemoveAll(tx)
+	err = RepositoryChunkHashSqlite{}.RemoveAllWithTransaction(tx)
 	if err != nil {
 		return err
 	}
 
-	err = rcs.removeAll(tx)
+	err = rcs.RemoveAllWithTransaction(tx)
 	if err != nil {
 		return err
 	}
@@ -166,7 +168,7 @@ func (rcs RepositoryChunkSqlite) RemoveAll() error {
 	return tx.Commit()
 }
 
-func (rcs RepositoryChunkSqlite) removeAll(tx *sql.Tx) error {
+func (rcs RepositoryChunkSqlite) RemoveAllWithTransaction(tx *sql.Tx) error {
 	_, err := tx.Exec(`DELETE FROM chunks`)
 	if err != nil {
 		return err
@@ -178,7 +180,7 @@ func (rcs RepositoryChunkSqlite) removeAll(tx *sql.Tx) error {
 
 func (rcs RepositoryChunkSqlite) RemoveByHashOriginalFile(hashOriginalFile string) ([]string, error) {
 	var hashList []string
-	fileId, err := RepositoryFileSqlite{}.GetIdByHashFile(hashOriginalFile)
+	fileId, err := RepositoryFileSqlite{}.GetIdByHash(hashOriginalFile)
 	if err != nil {
 		return hashList, fmt.Errorf("falha ao buscar id do arquivo: %v", err)
 	}
@@ -221,13 +223,13 @@ func (rcs RepositoryChunkSqlite) RemoveByHashOriginalFile(hashOriginalFile strin
 		}
 
 		hashList = append(hashList, chunkHash)
-		err = RepositoryChunkHashSqlite{}.RemoveByChunkHashId(item.Id, tx)
+		err = RepositoryChunkHashSqlite{}.RemoveById(item.Id, tx)
 		if err != nil {
 			return hashList, err
 		}
 	}
 
-	err = rcs.removeByChunkId(id, tx)
+	err = rcs.removeById(id, tx)
 	if err != nil {
 		return hashList, err
 	}
@@ -235,7 +237,7 @@ func (rcs RepositoryChunkSqlite) RemoveByHashOriginalFile(hashOriginalFile strin
 	return hashList, tx.Commit()
 }
 
-func (rcs RepositoryChunkSqlite) removeByChunkId(id int64, tx *sql.Tx) error {
+func (rcs RepositoryChunkSqlite) removeById(id int64, tx *sql.Tx) error {
 	_, err := tx.Exec(`DELETE FROM chunks WHERE id = ?`, id)
 	return err
 }

@@ -10,7 +10,7 @@ func (rchchs RepositoryChunkHasChunkHashSqlite) Create(chunkId int64, chunkHashI
 	return err
 }
 
-func (rchchs RepositoryChunkHasChunkHashSqlite) RemoveAll(tx *sql.Tx) error {
+func (rchchs RepositoryChunkHasChunkHashSqlite) RemoveAllWithTransaction(tx *sql.Tx) error {
 	_, err := tx.Exec(`DELETE FROM chunks_has_chunk_hashes`)
 	if err != nil {
 		return err

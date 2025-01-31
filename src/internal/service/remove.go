@@ -25,7 +25,7 @@ func (ac *Action) FeatureRemove() error {
 	}
 
 	logger.GetLogActivity().WriteLog("Removendo registro da coleção file...")
-	err = repositoryFile.RemoveByHashFile(hashOriginalFile)
+	err = repositoryFile.RemoveByHash(hashOriginalFile)
 	if err != nil {
 		logger.GetLogError().WriteLog(err.Error())
 		return err
