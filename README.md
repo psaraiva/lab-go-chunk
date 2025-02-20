@@ -43,7 +43,7 @@ Acessando o banco de dados sqlite:
 - `docker exec -it lab-go-chunk-cli-dev sqlite3 out_application/collection/sqlite/data_base.db`
 
 Executando testes unitários:
-folder: */src/repository*
+pasta: */src/repository*
 - `go test -v -cover`
 - `go test -v -coverprofile=coverage.out`
 - `go tool cover -html=coverage.out`
