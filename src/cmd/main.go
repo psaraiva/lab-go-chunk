@@ -85,7 +85,7 @@ func isValidArgAction(arg_action *string) bool {
 }
 
 func isValidArgFileTarget(file_target *string) bool {
-	return len(*file_target) > 1
+	return len(*file_target) > 4
 }
 
 func isValidConfigRepositorty() bool {

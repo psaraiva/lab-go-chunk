@@ -40,7 +40,13 @@ remove: Remove um arquivo do sistema.
 - `docker exec -it lab-go-chunk-cli-dev go run src/cmd/main.go -action remove -file-target day_book_18.07.txt`
 
 Acessando o banco de dados sqlite:
-- `sqlite3 out_application/collection/sqlite/data_base.db`
+- `docker exec -it lab-go-chunk-cli-dev sqlite3 out_application/collection/sqlite/data_base.db`
+
+Executando testes unitários:
+pasta: */src/repository*
+- `go test -v -cover`
+- `go test -v -coverprofile=coverage.out`
+- `go tool cover -html=coverage.out`
 
 **Obs:**
 - Minhas anotações sobre [SQLite](https://gist.github.com/psaraiva/23132a7b90dd629467b8efd13fbd1b25)

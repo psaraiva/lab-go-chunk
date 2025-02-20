@@ -2,14 +2,14 @@ package repository
 
 import (
 	"database/sql"
-	"lab/src/model"
+	"lab/src/internal/entity"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type RepositoryFileSqlite struct{}
 
-func (rfs RepositoryFileSqlite) Create(file model.File) (int64, error) {
+func (rfs RepositoryFileSqlite) Create(file entity.File) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -17,8 +17,8 @@ func (rfs RepositoryFileSqlite) Create(file model.File) (int64, error) {
 	}
 	defer db.Close()
 
-	query := `INSERT INTO files (name, hash) VALUES (?, ?) RETURNING id`
-	err = db.QueryRow(query, file.Name, file.Hash).Scan(&id)
+	dml := `INSERT INTO files (name, hash) VALUES (?, ?) RETURNING id`
+	err = db.QueryRow(dml, file.Name, file.Hash).Scan(&id)
 	return id, err
 }
 
@@ -30,16 +30,16 @@ func (rfs RepositoryFileSqlite) GetHashByName(name string) (string, error) {
 	}
 	defer db.Close()
 
-	query := `SELECT hash FROM files WHERE name = ?`
-	err = db.QueryRow(query, name).Scan(&fileName)
+	dml := `SELECT hash FROM files WHERE name = ?`
+	err = db.QueryRow(dml, name).Scan(&fileName)
 	if err == sql.ErrNoRows {
-		return fileName, nil
+		return fileName, ErrorRecordNotFound
 	}
 
 	return fileName, err
 }
 
-func (rfs RepositoryFileSqlite) IsExistsByHashFile(hashFile string) (bool, error) {
+func (rfs RepositoryFileSqlite) IsExistsByHash(hash string) (bool, error) {
 	db, err := getConectionSqlite()
 	if err != nil {
 		return false, err
@@ -47,8 +47,8 @@ func (rfs RepositoryFileSqlite) IsExistsByHashFile(hashFile string) (bool, error
 	defer db.Close()
 
 	var count int
-	query := `SELECT COUNT(id) FROM files WHERE hash = ?`
-	err = db.QueryRow(query, hashFile).Scan(&count)
+	dml := `SELECT COUNT(id) FROM files WHERE hash = ?`
+	err = db.QueryRow(dml, hash).Scan(&count)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
@@ -60,18 +60,62 @@ func (rfs RepositoryFileSqlite) IsExistsByHashFile(hashFile string) (bool, error
 	return count > 0, nil
 }
 
-func (rfs RepositoryFileSqlite) RemoveByHashFile(hashFile string) error {
+func (rfs RepositoryFileSqlite) RemoveByHash(hash string) error {
 	db, err := getConectionSqlite()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`DELETE FROM files WHERE hash = ?`, hashFile)
+	result, err := db.Exec(`DELETE FROM files WHERE hash = ?`, hash)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrorRecordNotFound
+	}
+
 	return err
 }
 
 func (rfs RepositoryFileSqlite) RemoveAll() error {
+	err := rfs.resetTable()
+	if err != nil {
+		return err
+	}
+
+	err = rfs.resetAutoIncrement()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rfs RepositoryFileSqlite) GetIdByHash(hash string) (int64, error) {
+	var id int64
+	db, err := getConectionSqlite()
+	if err != nil {
+		return id, err
+	}
+	defer db.Close()
+
+	dml := `SELECT id FROM files WHERE hash = ?`
+	err = db.QueryRow(dml, hash).Scan(&id)
+	if err == sql.ErrNoRows {
+		return id, ErrorRecordNotFound
+	}
+
+	return id, err
+}
+
+func (rfs RepositoryFileSqlite) resetTable() error {
 	db, err := getConectionSqlite()
 	if err != nil {
 		return err
@@ -83,23 +127,38 @@ func (rfs RepositoryFileSqlite) RemoveAll() error {
 		return err
 	}
 
-	_, err = db.Exec(`DELETE FROM sqlite_sequence WHERE name = 'files'`)
+	var count int
+	dml := `SELECT COUNT(id) FROM files`
+	err = db.QueryRow(dml).Scan(&count)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+
 	return err
 }
 
-func (rfs RepositoryFileSqlite) GetIdByHashFile(hashFile string) (int64, error) {
-	var id int64
+func (rfs RepositoryFileSqlite) resetAutoIncrement() error {
 	db, err := getConectionSqlite()
 	if err != nil {
-		return id, err
+		return err
 	}
 	defer db.Close()
 
-	query := `SELECT id FROM files WHERE hash = ?`
-	err = db.QueryRow(query, hashFile).Scan(&id)
-	if err == sql.ErrNoRows {
-		return id, nil
+	_, err = db.Exec(`DELETE FROM sqlite_sequence WHERE name = 'files'`)
+	if err != nil {
+		return err
 	}
 
-	return id, err
+	var seq int
+	dml := `SELECT seq FROM sqlite_sequence WHERE name='files'`
+	err = db.QueryRow(dml).Scan(&seq)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

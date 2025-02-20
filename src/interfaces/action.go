@@ -6,4 +6,5 @@ type ServiceAction interface {
 	FeatureRemove() error
 	FeatureClear() error
 	GetActionType() string
+	LogErrorWrite(string, string)
 }

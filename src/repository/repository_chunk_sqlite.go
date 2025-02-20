@@ -3,12 +3,12 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"lab/src/model"
+	"lab/src/internal/entity"
 )
 
 type RepositoryChunkSqlite struct{}
 
-func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
+func (rcs RepositoryChunkSqlite) Create(chunk entity.Chunk) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -16,9 +16,9 @@ func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
 	}
 	defer db.Close()
 
-	fileId, err := RepositoryFileSqlite{}.GetIdByHashFile(chunk.HashOriginalFile)
+	fileId, err := RepositoryFileSqlite{}.GetIdByHash(chunk.HashOriginalFile)
 	if err != nil {
-		return id, fmt.Errorf("falha ao buscar id do arquivo: %v", err)
+		return id, err
 	}
 
 	tx, err := db.Begin()
@@ -29,39 +29,49 @@ func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
 
 	id, err = rcs.create(chunk, fileId, tx)
 	if err != nil {
-		return id, fmt.Errorf("falha ao criar chunk: %v", err)
+		return id, err
 	}
 
 	err = rcs.createChunkList(id, chunk.HashList, tx)
 	if err != nil {
-		return id, fmt.Errorf("falha ao criar lista de hash do chunk: %v", err)
+		return id, err
 	}
 
 	return id, tx.Commit()
 }
 
-func (rcs RepositoryChunkSqlite) create(chunk model.Chunk, fileId int64, tx *sql.Tx) (int64, error) {
+func (rcs RepositoryChunkSqlite) create(chunk entity.Chunk, fileId int64, tx *sql.Tx) (int64, error) {
 	var id int64
-	query := `INSERT INTO chunks (size, file_id) VALUES (?, ?) RETURNING id`
-	err := tx.QueryRow(query, chunk.Size, fileId).Scan(&id)
-	return id, err
+	dml := `INSERT INTO chunks (size, file_id) VALUES (?, ?) RETURNING id`
+	return id, tx.QueryRow(dml, chunk.Size, fileId).Scan(&id)
 }
 
-func (rcs RepositoryChunkSqlite) createChunkList(chunkid int64, hashList []string, tx *sql.Tx) error {
+func (rcs RepositoryChunkSqlite) createChunkList(chunkId int64, chunkHashList []string, tx *sql.Tx) error {
 	var pks []int64
-	for _, hash := range hashList {
-		id, err := RepositoryChunkHashSqlite{}.Create(hash, tx)
-		if err != nil {
-			return fmt.Errorf("falha ao criar lista de hash do chunk: %v", err)
+	for _, chunkHash := range chunkHashList {
+		id, err := RepositoryChunkHashSqlite{}.GetIdByHash(chunkHash)
+		if err == nil {
+			pks = append(pks, id)
+			continue
 		}
 
-		pks = append(pks, id)
+		if err == ErrorRecordNotFound {
+			id, err = RepositoryChunkHashSqlite{}.Create(chunkHash, tx)
+			if err != nil {
+				return err
+			}
+
+			pks = append(pks, id)
+			continue
+		}
+
+		return err
 	}
 
 	for _, chunkHashId := range pks {
-		err := RepositoryChunkHasChunkHashSqlite{}.Create(chunkid, chunkHashId, tx)
+		err := RepositoryChunkHasChunkHashSqlite{}.Create(chunkId, chunkHashId, tx)
 		if err != nil {
-			return fmt.Errorf("falha ao criar relacionamento, chunk has chunk hash: %v", err)
+			return err
 		}
 	}
 
@@ -76,9 +86,13 @@ func (rcs RepositoryChunkSqlite) GetChunkHashListByHashOriginalFile(hashOriginal
 	}
 	defer db.Close()
 
-	fileId, err := RepositoryFileSqlite{}.GetIdByHashFile(hashOriginalFile)
+	fileId, err := RepositoryFileSqlite{}.GetIdByHash(hashOriginalFile)
+	if err == sql.ErrNoRows {
+		return hashList, ErrorRecordNotFound
+	}
+
 	if err != nil {
-		return hashList, fmt.Errorf("falha ao buscar id do arquivo: %v", err)
+		return hashList, err
 	}
 
 	id, err := rcs.getIdByFileId(fileId)
@@ -86,14 +100,14 @@ func (rcs RepositoryChunkSqlite) GetChunkHashListByHashOriginalFile(hashOriginal
 		return hashList, fmt.Errorf("falha ao buscar id do chunk pelo id do arquivo: %v", err)
 	}
 
-	query := `SELECT ch.hash
+	dml := `SELECT ch.hash
                 FROM chunk_hashes AS ch
           INNER JOIN chunks_has_chunk_hashes AS chch
                   ON ch.id = chch.chunk_hash_id
                WHERE chch.chunk_id = ?`
-	rows, err := db.Query(query, id)
+	rows, err := db.Query(dml, id)
 	if err == sql.ErrNoRows {
-		return hashList, nil
+		return hashList, ErrorRecordNotFound
 	}
 
 	if err != nil {
@@ -113,7 +127,7 @@ func (rcs RepositoryChunkSqlite) GetChunkHashListByHashOriginalFile(hashOriginal
 	return hashList, nil
 }
 
-func (rcs RepositoryChunkSqlite) CountChunkHash(hash string) (int64, error) {
+func (rcs RepositoryChunkSqlite) CountUsedChunkHash(hash string) (int64, error) {
 	var count int64
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -121,13 +135,12 @@ func (rcs RepositoryChunkSqlite) CountChunkHash(hash string) (int64, error) {
 	}
 	defer db.Close()
 
-	query := `SELECT COUNT(chch.chunk_id)
-	            FROM chunks_has_chunk_hashes AS chch
-          INNER JOIN chunk_hashes AS ch
-                  ON ch.id = chch.chunk_hash_id
-               WHERE ch.hash = ?`
-
-	err = db.QueryRow(query, hash).Scan(&count)
+	dml := `SELECT COUNT(chch.chunk_id)
+             FROM chunks_has_chunk_hashes AS chch
+       INNER JOIN chunk_hashes AS ch
+               ON ch.id = chch.chunk_hash_id
+            WHERE ch.hash = ?`
+	err = db.QueryRow(dml, hash).Scan(&count)
 	if err == sql.ErrNoRows {
 		return count, nil
 	}
@@ -148,17 +161,17 @@ func (rcs RepositoryChunkSqlite) RemoveAll() error {
 	}
 	defer tx.Rollback()
 
-	err = RepositoryChunkHasChunkHashSqlite{}.RemoveAll(tx)
+	err = RepositoryChunkHasChunkHashSqlite{}.RemoveAllWithTransaction(tx)
 	if err != nil {
 		return err
 	}
 
-	err = RepositoryChunkHashSqlite{}.RemoveAll(tx)
+	err = RepositoryChunkHashSqlite{}.RemoveAllWithTransaction(tx)
 	if err != nil {
 		return err
 	}
 
-	err = rcs.removeAll(tx)
+	err = rcs.removeAllWithTransaction(tx)
 	if err != nil {
 		return err
 	}
@@ -166,21 +179,11 @@ func (rcs RepositoryChunkSqlite) RemoveAll() error {
 	return tx.Commit()
 }
 
-func (rcs RepositoryChunkSqlite) removeAll(tx *sql.Tx) error {
-	_, err := tx.Exec(`DELETE FROM chunks`)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`DELETE FROM sqlite_sequence WHERE name='chunks'`)
-	return err
-}
-
 func (rcs RepositoryChunkSqlite) RemoveByHashOriginalFile(hashOriginalFile string) ([]string, error) {
 	var hashList []string
-	fileId, err := RepositoryFileSqlite{}.GetIdByHashFile(hashOriginalFile)
+	fileId, err := RepositoryFileSqlite{}.GetIdByHash(hashOriginalFile)
 	if err != nil {
-		return hashList, fmt.Errorf("falha ao buscar id do arquivo: %v", err)
+		return hashList, err
 	}
 
 	id, err := rcs.getIdByFileId(fileId)
@@ -221,13 +224,13 @@ func (rcs RepositoryChunkSqlite) RemoveByHashOriginalFile(hashOriginalFile strin
 		}
 
 		hashList = append(hashList, chunkHash)
-		err = RepositoryChunkHashSqlite{}.RemoveByChunkHashId(item.Id, tx)
+		err = RepositoryChunkHashSqlite{}.RemoveByIdWithTransaction(item.Id, tx)
 		if err != nil {
 			return hashList, err
 		}
 	}
 
-	err = rcs.removeByChunkId(id, tx)
+	err = rcs.removeByIdWithTransaction(id, tx)
 	if err != nil {
 		return hashList, err
 	}
@@ -235,9 +238,32 @@ func (rcs RepositoryChunkSqlite) RemoveByHashOriginalFile(hashOriginalFile strin
 	return hashList, tx.Commit()
 }
 
-func (rcs RepositoryChunkSqlite) removeByChunkId(id int64, tx *sql.Tx) error {
-	_, err := tx.Exec(`DELETE FROM chunks WHERE id = ?`, id)
+func (rcs RepositoryChunkSqlite) removeAllWithTransaction(tx *sql.Tx) error {
+	_, err := tx.Exec(`DELETE FROM chunks`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`DELETE FROM sqlite_sequence WHERE name='chunks'`)
 	return err
+}
+
+func (rcs RepositoryChunkSqlite) removeByIdWithTransaction(id int64, tx *sql.Tx) error {
+	result, err := tx.Exec(`DELETE FROM chunks WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return ErrorRecordNotFound
+	}
+
+	return nil
 }
 
 func (rcs RepositoryChunkSqlite) getIdByFileId(fileId int64) (int64, error) {
@@ -248,10 +274,10 @@ func (rcs RepositoryChunkSqlite) getIdByFileId(fileId int64) (int64, error) {
 	}
 	defer db.Close()
 
-	query := `SELECT id FROM chunks WHERE file_id = ?`
-	err = db.QueryRow(query, fileId).Scan(&id)
+	dml := `SELECT id FROM chunks WHERE file_id = ?`
+	err = db.QueryRow(dml, fileId).Scan(&id)
 	if err == sql.ErrNoRows {
-		return id, nil
+		return id, ErrorRecordNotFound
 	}
 
 	return id, err
