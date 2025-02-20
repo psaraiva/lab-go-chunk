@@ -2,15 +2,14 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
-	"lab/src/model"
+	"lab/src/internal/entity"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type RepositoryFileSqlite struct{}
 
-func (rfs RepositoryFileSqlite) Create(file model.File) (int64, error) {
+func (rfs RepositoryFileSqlite) Create(file entity.File) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -23,7 +22,6 @@ func (rfs RepositoryFileSqlite) Create(file model.File) (int64, error) {
 	return id, err
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rfs RepositoryFileSqlite) GetHashByName(name string) (string, error) {
 	var fileName string
 	db, err := getConectionSqlite()
@@ -35,7 +33,7 @@ func (rfs RepositoryFileSqlite) GetHashByName(name string) (string, error) {
 	dml := `SELECT hash FROM files WHERE name = ?`
 	err = db.QueryRow(dml, name).Scan(&fileName)
 	if err == sql.ErrNoRows {
-		return fileName, errors.New("record not found")
+		return fileName, ErrorRecordNotFound
 	}
 
 	return fileName, err
@@ -62,7 +60,6 @@ func (rfs RepositoryFileSqlite) IsExistsByHash(hash string) (bool, error) {
 	return count > 0, nil
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rfs RepositoryFileSqlite) RemoveByHash(hash string) error {
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -81,7 +78,7 @@ func (rfs RepositoryFileSqlite) RemoveByHash(hash string) error {
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("record not found")
+		return ErrorRecordNotFound
 	}
 
 	return err
@@ -101,7 +98,6 @@ func (rfs RepositoryFileSqlite) RemoveAll() error {
 	return nil
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rfs RepositoryFileSqlite) GetIdByHash(hash string) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
@@ -113,7 +109,7 @@ func (rfs RepositoryFileSqlite) GetIdByHash(hash string) (int64, error) {
 	dml := `SELECT id FROM files WHERE hash = ?`
 	err = db.QueryRow(dml, hash).Scan(&id)
 	if err == sql.ErrNoRows {
-		return id, errors.New("record not found")
+		return id, ErrorRecordNotFound
 	}
 
 	return id, err

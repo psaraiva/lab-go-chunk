@@ -2,8 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
-	"lab/src/model"
+	"lab/src/internal/entity"
 	"os"
 	"reflect"
 	"testing"
@@ -11,7 +10,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func setUpRepositoryChunkSqliteTestDB(t *testing.T) (*sql.DB, RepositoryChunkSqlite) {
+func setUpRepositoryChunkSqliteTest(t *testing.T) (*sql.DB, RepositoryChunkSqlite) {
 	err := godotenv.Load("../../src/.env.test")
 	if err != nil {
 		panic("Error loading .env.test file")
@@ -75,38 +74,16 @@ func setUpRepositoryChunkSqliteTestDB(t *testing.T) (*sql.DB, RepositoryChunkSql
 	return db, RepositoryChunkSqlite{}
 }
 
-func setDownRepositoryChunkSqliteTestDB(t *testing.T, db *sql.DB) {
-	defer db.Close()
-
-	_, err := db.Exec(`DROP TABLE chunks_has_chunk_hashes`)
-	if err != nil {
-		t.Fatalf("Failed to drop table chunks_has_chunk_hashes: %v", err)
-	}
-
-	_, err = db.Exec(`DROP TABLE chunk_hashes`)
-	if err != nil {
-		t.Fatalf("Failed to drop table chunk_hashes: %v", err)
-	}
-
-	_, err = db.Exec(`DROP TABLE chunks`)
-	if err != nil {
-		t.Fatalf("Failed to drop table chunks: %v", err)
-	}
-
-	_, err = db.Exec(`DROP TABLE files`)
-	if err != nil {
-		t.Fatalf("Failed to drop table files: %v", err)
-	}
-
-	err = os.Remove(os.Getenv("CONFIG_HOST_SQLITE"))
+func setDownRepositoryChunkSqliteTest(t *testing.T) {
+	err := os.Remove(os.Getenv("CONFIG_HOST_SQLITE"))
 	if err != nil {
 		t.Fatalf("Failed to remove test database: %v", err)
 	}
 }
 
 func TestRepositoryChunkSqliteCreate(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	hash := "ABC123"
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test.txt", hash)
@@ -114,7 +91,7 @@ func TestRepositoryChunkSqliteCreate(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	id, err := repo.Create(model.Chunk{
+	id, err := repo.Create(entity.Chunk{
 		HashOriginalFile: hash,
 		HashList:         []string{"ABCDEF", "123456"},
 		Size:             1024,
@@ -130,24 +107,24 @@ func TestRepositoryChunkSqliteCreate(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteCreateNotFoundFileHash(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	_, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
-	_, err := repo.Create(model.Chunk{
+	_, err := repo.Create(entity.Chunk{
 		HashOriginalFile: "123456789ABCDEFGHI",
 		HashList:         []string{"ABCDEF", "123456"},
 		Size:             1024,
 	})
 
-	expected := errors.New("record not found")
+	expected := ErrorRecordNotFound
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
 }
 
 func TestRepositoryChunkSqliteGetChunkHashListByHashOriginalFile(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	hashFile := "123ABC123"
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test.txt", hashFile)
@@ -156,7 +133,7 @@ func TestRepositoryChunkSqliteGetChunkHashListByHashOriginalFile(t *testing.T) {
 	}
 
 	expectedHashList := []string{"ABCDEF", "123456"}
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: hashFile,
 		HashList:         expectedHashList,
 		Size:             1024,
@@ -177,19 +154,19 @@ func TestRepositoryChunkSqliteGetChunkHashListByHashOriginalFile(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteGetChunkHashListByHashOriginalFileNotFound(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	_, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := repo.GetChunkHashListByHashOriginalFile("ABC456")
-	expected := errors.New("record not found")
+	expected := ErrorRecordNotFound
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
 }
 
 func TestRepositoryChunkSqliteCountChunkHashZero(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test_a.txt", "123ABC123")
 	if err != nil {
@@ -207,15 +184,15 @@ func TestRepositoryChunkSqliteCountChunkHashZero(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteCountChunkHashOne(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test_a.txt", "123ABC123")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "123ABC123",
 		HashList:         []string{"ABCDEF", "123456"},
 		Size:             1024,
@@ -241,15 +218,15 @@ func TestRepositoryChunkSqliteCountChunkHashOne(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteCountChunkHashTwo(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test_a.txt", "123ABC123")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "123ABC123",
 		HashList:         []string{"ABCDEF", "123456"},
 		Size:             1024,
@@ -264,7 +241,7 @@ func TestRepositoryChunkSqliteCountChunkHashTwo(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "ABC123ABC",
 		HashList:         []string{"ABCDEF", "ABCDEF0123456"},
 		Size:             1024,
@@ -285,15 +262,15 @@ func TestRepositoryChunkSqliteCountChunkHashTwo(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteRemoveAll(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test_a.txt", "123ABC123")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "123ABC123",
 		HashList:         []string{"ABCDEF", "123456"},
 		Size:             1024,
@@ -308,7 +285,7 @@ func TestRepositoryChunkSqliteRemoveAll(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "ABC123ABC",
 		HashList:         []string{"ABCDEF", "ABCDEF0123456"},
 		Size:             1024,
@@ -352,15 +329,15 @@ func TestRepositoryChunkSqliteRemoveAll(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteRemoveAllSequence(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`, "test_a.txt", "123ABC123")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "123ABC123",
 		HashList:         []string{"ABCDEF", "123456"},
 		Size:             1024,
@@ -375,7 +352,7 @@ func TestRepositoryChunkSqliteRemoveAllSequence(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: "ABC123ABC",
 		HashList:         []string{"ABCDEF", "ABCDEF0123456"},
 		Size:             1024,
@@ -407,8 +384,8 @@ func TestRepositoryChunkSqliteRemoveAllSequence(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteRemoveByHashOriginalFile(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	db, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	originalHashFile := "123ABC123"
 	_, err := db.Exec(`INSERT INTO files (name, hash) VALUES (?,?)`,
@@ -420,7 +397,7 @@ func TestRepositoryChunkSqliteRemoveByHashOriginalFile(t *testing.T) {
 	}
 
 	expectedHashList := []string{"ABCDEF", "123456"}
-	_, err = repo.Create(model.Chunk{
+	_, err = repo.Create(entity.Chunk{
 		HashOriginalFile: originalHashFile,
 		HashList:         expectedHashList,
 		Size:             1024,
@@ -441,11 +418,11 @@ func TestRepositoryChunkSqliteRemoveByHashOriginalFile(t *testing.T) {
 }
 
 func TestRepositoryChunkSqliteRemoveByHashOriginalFileNotFound(t *testing.T) {
-	db, repo := setUpRepositoryChunkSqliteTestDB(t)
-	defer setDownRepositoryChunkSqliteTestDB(t, db)
+	_, repo := setUpRepositoryChunkSqliteTest(t)
+	defer setDownRepositoryChunkSqliteTest(t)
 
 	_, err := repo.RemoveByHashOriginalFile("123ABC123")
-	expected := errors.New("record not found")
+	expected := ErrorRecordNotFound
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}

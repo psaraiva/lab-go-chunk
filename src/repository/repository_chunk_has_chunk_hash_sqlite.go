@@ -1,6 +1,9 @@
 package repository
 
-import "database/sql"
+import (
+	"database/sql"
+	"errors"
+)
 
 type RepositoryChunkHasChunkHashSqlite struct{}
 
@@ -11,6 +14,10 @@ func (rchchs RepositoryChunkHasChunkHashSqlite) Create(chunkId int64, chunkHashI
 }
 
 func (rchchs RepositoryChunkHasChunkHashSqlite) RemoveAllWithTransaction(tx *sql.Tx) error {
+	if tx == nil {
+		return errors.New("transaction not found")
+	}
+
 	_, err := tx.Exec(`DELETE FROM chunks_has_chunk_hashes`)
 	if err != nil {
 		return err
@@ -21,7 +28,20 @@ func (rchchs RepositoryChunkHasChunkHashSqlite) RemoveAllWithTransaction(tx *sql
 }
 
 func (rchchs RepositoryChunkHasChunkHashSqlite) RemoveByChunkId(id int64, tx *sql.Tx) error {
-	_, err := tx.Exec(`DELETE FROM chunks_has_chunk_hashes WHERE chunk_id = ?`, id)
+	result, err := tx.Exec(`DELETE FROM chunks_has_chunk_hashes WHERE chunk_id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrorRecordNotFound
+	}
+
 	return err
 }
 

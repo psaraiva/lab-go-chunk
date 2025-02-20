@@ -3,22 +3,22 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"lab/src/model"
+	"lab/src/internal/entity"
 	"os"
 )
 
 type RepositoryChunkJson struct{}
 
-func (rcj RepositoryChunkJson) Create(chunk model.Chunk) (int64, error) {
+func (rcj RepositoryChunkJson) Create(chunk entity.Chunk) (int64, error) {
 	var id int64
-	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
+	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_CHUNK_JSON"))
 	if err != nil {
 		return id, err
 	}
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []model.Chunk{}
+	chunkList := []entity.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return id, err
@@ -30,7 +30,7 @@ func (rcj RepositoryChunkJson) Create(chunk model.Chunk) (int64, error) {
 		return id, err
 	}
 
-	err = os.WriteFile(os.Getenv("COLLECTION_JSON_CHUNK"), updatedJSON, 0644)
+	err = os.WriteFile(os.Getenv("COLLECTION_CHUNK_JSON"), updatedJSON, 0644)
 	if err != nil {
 		return id, err
 	}
@@ -39,14 +39,14 @@ func (rcj RepositoryChunkJson) Create(chunk model.Chunk) (int64, error) {
 }
 
 func (rcj RepositoryChunkJson) GetChunkHashListByHashOriginalFile(hashOriginalFile string) ([]string, error) {
-	jsonChunk, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
+	jsonChunk, err := os.Open(os.Getenv("COLLECTION_CHUNK_JSON"))
 	if err != nil {
 		return nil, err
 	}
 	defer jsonChunk.Close()
 
 	decoder := json.NewDecoder(jsonChunk)
-	chunkList := []model.Chunk{}
+	chunkList := []entity.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return nil, err
@@ -58,10 +58,10 @@ func (rcj RepositoryChunkJson) GetChunkHashListByHashOriginalFile(hashOriginalFi
 		}
 	}
 
-	return nil, fmt.Errorf("arquivo não encontrado")
+	return nil, fmt.Errorf("record not found")
 }
 
-func (rcj RepositoryChunkJson) getCountChunkMap(chunkList []model.Chunk) map[string]int64 {
+func (rcj RepositoryChunkJson) getCountChunkMap(chunkList []entity.Chunk) map[string]int64 {
 	chunkCount := make(map[string]int64)
 	for _, item := range chunkList {
 		for _, value := range item.HashList {
@@ -72,14 +72,14 @@ func (rcj RepositoryChunkJson) getCountChunkMap(chunkList []model.Chunk) map[str
 }
 
 func (rcj RepositoryChunkJson) CountUsedChunkHash(hash string) (int64, error) {
-	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
+	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_CHUNK_JSON"))
 	if err != nil {
 		return 0, err
 	}
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []model.Chunk{}
+	chunkList := []entity.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return 0, err
@@ -90,7 +90,7 @@ func (rcj RepositoryChunkJson) CountUsedChunkHash(hash string) (int64, error) {
 }
 
 func (rcj RepositoryChunkJson) RemoveAll() error {
-	err := os.WriteFile(os.Getenv("COLLECTION_JSON_CHUNK"), []byte("[]"), 0644)
+	err := os.WriteFile(os.Getenv("COLLECTION_CHUNK_JSON"), []byte("[]"), 0644)
 	if err != nil {
 		return err
 	}
@@ -99,20 +99,20 @@ func (rcj RepositoryChunkJson) RemoveAll() error {
 
 func (rcj RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string) ([]string, error) {
 	var hashList []string
-	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_JSON_CHUNK"))
+	jsonChunkFile, err := os.Open(os.Getenv("COLLECTION_CHUNK_JSON"))
 	if err != nil {
 		return hashList, err
 	}
 	defer jsonChunkFile.Close()
 
 	decoder := json.NewDecoder(jsonChunkFile)
-	chunkList := []model.Chunk{}
+	chunkList := []entity.Chunk{}
 	err = decoder.Decode(&chunkList)
 	if err != nil {
 		return hashList, err
 	}
 
-	chunkTarget := model.Chunk{}
+	chunkTarget := entity.Chunk{}
 	for index, item := range chunkList {
 		if item.HashOriginalFile == hashOriginalFile {
 			chunkTarget = chunkList[index]
@@ -126,7 +126,7 @@ func (rcj RepositoryChunkJson) RemoveByHashOriginalFile(hashOriginalFile string)
 		return hashList, err
 	}
 
-	err = os.WriteFile(os.Getenv("COLLECTION_JSON_CHUNK"), upJSON, 0644)
+	err = os.WriteFile(os.Getenv("COLLECTION_CHUNK_JSON"), upJSON, 0644)
 	if err != nil {
 		return hashList, err
 	}

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 )
 
 type RepositoryChunkHashSqlite struct{}
@@ -13,7 +12,6 @@ func (rchs RepositoryChunkHashSqlite) Create(hash string, tx *sql.Tx) (int64, er
 	return id, tx.QueryRow(dml, hash).Scan(&id)
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rchs RepositoryChunkHashSqlite) GetIdByHash(hash string) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
@@ -25,13 +23,12 @@ func (rchs RepositoryChunkHashSqlite) GetIdByHash(hash string) (int64, error) {
 	dml := `SELECT id FROM chunk_hashes WHERE hash = ?`
 	err = db.QueryRow(dml, hash).Scan(&id)
 	if err == sql.ErrNoRows {
-		return id, errors.New("record not found")
+		return id, ErrorRecordNotFound
 	}
 
 	return id, err
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rchs RepositoryChunkHashSqlite) GetHashById(id int64) (string, error) {
 	var hash string
 	db, err := getConectionSqlite()
@@ -43,7 +40,7 @@ func (rchs RepositoryChunkHashSqlite) GetHashById(id int64) (string, error) {
 	dml := `SELECT hash FROM chunk_hashes WHERE id = ?`
 	err = db.QueryRow(dml, id).Scan(&hash)
 	if err == sql.ErrNoRows {
-		return hash, errors.New("record not found")
+		return hash, ErrorRecordNotFound
 	}
 
 	return hash, err
@@ -79,7 +76,7 @@ func (rchs RepositoryChunkHashSqlite) RemoveByIdsWithTransaction(ids []int64, tx
 		}
 
 		if rowsAffected == 0 {
-			return errors.New("record not found")
+			return ErrorRecordNotFound
 		}
 	}
 
@@ -98,7 +95,7 @@ func (rchs RepositoryChunkHashSqlite) RemoveByIdWithTransaction(id int64, tx *sq
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("record not found")
+		return ErrorRecordNotFound
 	}
 
 	return err

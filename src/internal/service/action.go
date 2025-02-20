@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"lab/src/interfaces"
 	"lab/src/logger"
 	"lab/src/repository"
@@ -8,10 +10,11 @@ import (
 )
 
 const (
-	ACTION_CLEAR    = "clear"
-	ACTION_DOWNLOAD = "download"
-	ACTION_REMOVE   = "remove"
-	ACTION_UPLOAD   = "upload"
+	ACTION_CLEAR         = "clear"
+	ACTION_DOWNLOAD      = "download"
+	ACTION_REMOVE        = "remove"
+	ACTION_UPLOAD        = "upload"
+	STRING_EMPTY_DEFAULT = "none"
 )
 
 type Action struct {
@@ -20,10 +23,17 @@ type Action struct {
 	Hash       string
 }
 
-var repositoryFile repository.RepositoryFile
-var repositoryChunk repository.RepositoryChunk
-var serviceTemporaryArea interfaces.ServiceTemporaryArea
-var serviceStorage interfaces.ServiceStorage
+var (
+	// repository
+	repositoryFile  repository.RepositoryFile
+	repositoryChunk repository.RepositoryChunk
+	// service
+	serviceTemporaryArea interfaces.ServiceTemporaryArea
+	serviceStorage       interfaces.ServiceStorage
+	// error
+	errorActionDefault = errors.New("ocorreu um erro nessa operação")
+	errorFileNotFound  = errors.New("file not found")
+)
 
 func MakeAction() Action {
 	repositoryFile = repository.MakeRepositoryFile(os.Getenv("ENGINE_COLLECTION"))
@@ -32,9 +42,9 @@ func MakeAction() Action {
 	serviceStorage = MakeServiceStorage()
 
 	return Action{
-		Type:       "none",
-		FileTarget: "none",
-		Hash:       "none",
+		Type:       STRING_EMPTY_DEFAULT,
+		FileTarget: STRING_EMPTY_DEFAULT,
+		Hash:       STRING_EMPTY_DEFAULT,
 	}
 }
 
@@ -44,7 +54,6 @@ func Execute(action interfaces.ServiceAction) error {
 		logger.GetLogActivity().WriteLog("Iniciando rotina de limpeza.")
 		err := action.FeatureClear()
 		if err != nil {
-			logger.GetLogError().WriteLog(err.Error())
 			return err
 		}
 
@@ -53,7 +62,6 @@ func Execute(action interfaces.ServiceAction) error {
 		logger.GetLogActivity().WriteLog("Iniciando rotina de carregamento de arquivo.")
 		err := action.FeatureUpload()
 		if err != nil {
-			logger.GetLogError().WriteLog(err.Error())
 			return err
 		}
 
@@ -62,7 +70,6 @@ func Execute(action interfaces.ServiceAction) error {
 		logger.GetLogActivity().WriteLog("Iniciando rotina de descarregamento de arquivo.")
 		err := action.FeatureDownload()
 		if err != nil {
-			logger.GetLogError().WriteLog(err.Error())
 			return err
 		}
 
@@ -71,7 +78,6 @@ func Execute(action interfaces.ServiceAction) error {
 		logger.GetLogActivity().WriteLog("Iniciando rotina de remoção de arquivo.")
 		err := action.FeatureRemove()
 		if err != nil {
-			logger.GetLogError().WriteLog(err.Error())
 			return err
 		}
 
@@ -83,4 +89,8 @@ func Execute(action interfaces.ServiceAction) error {
 
 func (ac Action) GetActionType() string {
 	return ac.Type
+}
+
+func (ac Action) LogErrorWrite(action string, msg string) {
+	logger.GetLogError().WriteLog(fmt.Sprintf("%s: %s", action, msg))
 }

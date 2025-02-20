@@ -3,22 +3,22 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"lab/src/model"
+	"lab/src/internal/entity"
 	"os"
 )
 
 type RepositoryFileJson struct{}
 
-func (rfj RepositoryFileJson) Create(file model.File) (int64, error) {
+func (rfj RepositoryFileJson) Create(file entity.File) (int64, error) {
 	var id int64
-	jsonHash, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
+	fileJson, err := os.Open(os.Getenv("COLLECTION_FILE_JSON"))
 	if err != nil {
 		return id, err
 	}
-	defer jsonHash.Close()
+	defer fileJson.Close()
 
-	decoder := json.NewDecoder(jsonHash)
-	fileList := []model.File{}
+	decoder := json.NewDecoder(fileJson)
+	fileList := []entity.File{}
 	err = decoder.Decode(&fileList)
 	if err != nil {
 		return id, err
@@ -30,13 +30,13 @@ func (rfj RepositoryFileJson) Create(file model.File) (int64, error) {
 		}
 	}
 
-	fileList = append(fileList, model.File{Hash: file.Hash, Name: file.Name})
+	fileList = append(fileList, entity.File{Hash: file.Hash, Name: file.Name})
 	updatedJSON, err := json.MarshalIndent(fileList, "", "  ")
 	if err != nil {
 		return id, err
 	}
 
-	err = os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), updatedJSON, 0644)
+	err = os.WriteFile(os.Getenv("COLLECTION_FILE_JSON"), updatedJSON, 0644)
 	if err != nil {
 		return id, err
 	}
@@ -45,14 +45,14 @@ func (rfj RepositoryFileJson) Create(file model.File) (int64, error) {
 }
 
 func (rfj RepositoryFileJson) GetHashByName(name string) (string, error) {
-	jsonFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
+	jsonFile, err := os.Open(os.Getenv("COLLECTION_FILE_JSON"))
 	if err != nil {
 		return "", err
 	}
 	defer jsonFile.Close()
 
 	decoder := json.NewDecoder(jsonFile)
-	hashList := []model.File{}
+	hashList := []entity.File{}
 	err = decoder.Decode(&hashList)
 	if err != nil {
 		return "", err
@@ -64,18 +64,18 @@ func (rfj RepositoryFileJson) GetHashByName(name string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("arquivo não encontrado")
+	return "", fmt.Errorf("record not found")
 }
 
 func (rfj RepositoryFileJson) IsExistsByHash(hash string) (bool, error) {
-	jsonHash, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
+	jsonHash, err := os.Open(os.Getenv("COLLECTION_FILE_JSON"))
 	if err != nil {
 		return false, err
 	}
 	defer jsonHash.Close()
 
 	decoder := json.NewDecoder(jsonHash)
-	fileList := []model.File{}
+	fileList := []entity.File{}
 	err = decoder.Decode(&fileList)
 	if err != nil {
 		return false, err
@@ -91,24 +91,30 @@ func (rfj RepositoryFileJson) IsExistsByHash(hash string) (bool, error) {
 }
 
 func (rfj RepositoryFileJson) RemoveByHash(hash string) error {
-	jsonHashFile, err := os.Open(os.Getenv("COLLECTION_JSON_FILE"))
+	jsonHashFile, err := os.Open(os.Getenv("COLLECTION_FILE_JSON"))
 	if err != nil {
 		return err
 	}
 	defer jsonHashFile.Close()
 
 	decoder := json.NewDecoder(jsonHashFile)
-	fileList := []model.File{}
+	fileList := []entity.File{}
 	err = decoder.Decode(&fileList)
 	if err != nil {
 		return err
 	}
 
+	isDeleted := false
 	for index, item := range fileList {
 		if item.Hash == hash {
+			isDeleted = true
 			fileList = append(fileList[:index], fileList[index+1:]...)
 			break
 		}
+	}
+
+	if !isDeleted {
+		return fmt.Errorf("record not found")
 	}
 
 	upJSON, err := json.MarshalIndent(fileList, "", "  ")
@@ -116,7 +122,7 @@ func (rfj RepositoryFileJson) RemoveByHash(hash string) error {
 		return err
 	}
 
-	err = os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), upJSON, 0644)
+	err = os.WriteFile(os.Getenv("COLLECTION_FILE_JSON"), upJSON, 0644)
 	if err != nil {
 		return err
 	}
@@ -125,9 +131,5 @@ func (rfj RepositoryFileJson) RemoveByHash(hash string) error {
 }
 
 func (rfj RepositoryFileJson) RemoveAll() error {
-	err := os.WriteFile(os.Getenv("COLLECTION_JSON_FILE"), []byte("[]"), 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(os.Getenv("COLLECTION_FILE_JSON"), []byte("[]"), 0644)
 }

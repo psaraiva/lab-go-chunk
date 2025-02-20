@@ -6,6 +6,12 @@ import (
 
 func (ac *Action) FeatureClear() error {
 	err := repositoryChunk.RemoveAll()
+	defer func(err error) {
+		if err != nil {
+			ac.LogErrorWrite(ACTION_CLEAR, err.Error())
+		}
+	}(err)
+
 	if err != nil {
 		return err
 	}

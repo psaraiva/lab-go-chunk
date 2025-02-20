@@ -2,14 +2,13 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
-	"lab/src/model"
+	"lab/src/internal/entity"
 )
 
 type RepositoryChunkSqlite struct{}
 
-func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
+func (rcs RepositoryChunkSqlite) Create(chunk entity.Chunk) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
 	if err != nil {
@@ -41,7 +40,7 @@ func (rcs RepositoryChunkSqlite) Create(chunk model.Chunk) (int64, error) {
 	return id, tx.Commit()
 }
 
-func (rcs RepositoryChunkSqlite) create(chunk model.Chunk, fileId int64, tx *sql.Tx) (int64, error) {
+func (rcs RepositoryChunkSqlite) create(chunk entity.Chunk, fileId int64, tx *sql.Tx) (int64, error) {
 	var id int64
 	dml := `INSERT INTO chunks (size, file_id) VALUES (?, ?) RETURNING id`
 	return id, tx.QueryRow(dml, chunk.Size, fileId).Scan(&id)
@@ -56,7 +55,7 @@ func (rcs RepositoryChunkSqlite) createChunkList(chunkId int64, chunkHashList []
 			continue
 		}
 
-		if err.Error() == errors.New("record not found").Error() {
+		if err == ErrorRecordNotFound {
 			id, err = RepositoryChunkHashSqlite{}.Create(chunkHash, tx)
 			if err != nil {
 				return err
@@ -89,7 +88,7 @@ func (rcs RepositoryChunkSqlite) GetChunkHashListByHashOriginalFile(hashOriginal
 
 	fileId, err := RepositoryFileSqlite{}.GetIdByHash(hashOriginalFile)
 	if err == sql.ErrNoRows {
-		return hashList, errors.New("record not found")
+		return hashList, ErrorRecordNotFound
 	}
 
 	if err != nil {
@@ -108,7 +107,7 @@ func (rcs RepositoryChunkSqlite) GetChunkHashListByHashOriginalFile(hashOriginal
                WHERE chch.chunk_id = ?`
 	rows, err := db.Query(dml, id)
 	if err == sql.ErrNoRows {
-		return hashList, errors.New("record not found")
+		return hashList, ErrorRecordNotFound
 	}
 
 	if err != nil {
@@ -137,11 +136,10 @@ func (rcs RepositoryChunkSqlite) CountUsedChunkHash(hash string) (int64, error) 
 	defer db.Close()
 
 	dml := `SELECT COUNT(chch.chunk_id)
-	            FROM chunks_has_chunk_hashes AS chch
-          INNER JOIN chunk_hashes AS ch
-                  ON ch.id = chch.chunk_hash_id
-               WHERE ch.hash = ?`
-
+             FROM chunks_has_chunk_hashes AS chch
+       INNER JOIN chunk_hashes AS ch
+               ON ch.id = chch.chunk_hash_id
+            WHERE ch.hash = ?`
 	err = db.QueryRow(dml, hash).Scan(&count)
 	if err == sql.ErrNoRows {
 		return count, nil
@@ -250,7 +248,6 @@ func (rcs RepositoryChunkSqlite) removeAllWithTransaction(tx *sql.Tx) error {
 	return err
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rcs RepositoryChunkSqlite) removeByIdWithTransaction(id int64, tx *sql.Tx) error {
 	result, err := tx.Exec(`DELETE FROM chunks WHERE id = ?`, id)
 	if err != nil {
@@ -263,13 +260,12 @@ func (rcs RepositoryChunkSqlite) removeByIdWithTransaction(id int64, tx *sql.Tx)
 	}
 
 	if count == 0 {
-		return errors.New("record not found")
+		return ErrorRecordNotFound
 	}
 
 	return nil
 }
 
-// @WARNING: ALTERAÇÃO DE COMPORTAMENTO: ERRO SE NÃO ENCONTRAR O REGISTRO
 func (rcs RepositoryChunkSqlite) getIdByFileId(fileId int64) (int64, error) {
 	var id int64
 	db, err := getConectionSqlite()
@@ -281,7 +277,7 @@ func (rcs RepositoryChunkSqlite) getIdByFileId(fileId int64) (int64, error) {
 	dml := `SELECT id FROM chunks WHERE file_id = ?`
 	err = db.QueryRow(dml, fileId).Scan(&id)
 	if err == sql.ErrNoRows {
-		return id, errors.New("record not found")
+		return id, ErrorRecordNotFound
 	}
 
 	return id, err

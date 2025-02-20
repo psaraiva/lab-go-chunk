@@ -2,7 +2,8 @@ package repository
 
 import (
 	"database/sql"
-	"lab/src/model"
+	"errors"
+	"lab/src/internal/entity"
 	"os"
 )
 
@@ -11,8 +12,10 @@ const (
 	ENGINE_SQLITE = "sqlite"
 )
 
+var ErrorRecordNotFound = errors.New("record not found")
+
 type RepositoryFile interface {
-	Create(model.File) (int64, error)
+	Create(entity.File) (int64, error)
 	GetHashByName(string) (string, error)
 	IsExistsByHash(string) (bool, error)
 	RemoveAll() error
@@ -21,7 +24,7 @@ type RepositoryFile interface {
 
 type RepositoryChunk interface {
 	CountUsedChunkHash(string) (int64, error)
-	Create(model.Chunk) (int64, error)
+	Create(entity.Chunk) (int64, error)
 	GetChunkHashListByHashOriginalFile(string) ([]string, error)
 	RemoveAll() error
 	RemoveByHashOriginalFile(string) ([]string, error)

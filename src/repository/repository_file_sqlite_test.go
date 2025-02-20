@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"lab/src/model"
+	"lab/src/internal/entity"
 	"os"
 	"testing"
 
@@ -11,7 +11,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setUpRepositoryFileSqliteTestDB(t *testing.T) (*sql.DB, RepositoryFileSqlite) {
+func setUpRepositoryFileSqliteTest(t *testing.T) (*sql.DB, RepositoryFileSqlite) {
 	err := godotenv.Load("../../src/.env.test")
 	if err != nil {
 		panic("Error loading .env.test file")
@@ -37,27 +37,21 @@ func setUpRepositoryFileSqliteTestDB(t *testing.T) (*sql.DB, RepositoryFileSqlit
 	return db, RepositoryFileSqlite{}
 }
 
-func setDownRepositoryFileSqliteTestDB(t *testing.T, db *sql.DB) {
-	_, err := db.Exec(`DROP TABLE files`)
-	if err != nil {
-		t.Fatalf("Failed to drop table files: %v", err)
-	}
-
-	db.Close()
-	err = os.Remove(os.Getenv("CONFIG_HOST_SQLITE"))
+func setDownRepositoryFileSqliteTest(t *testing.T) {
+	err := os.Remove(os.Getenv("CONFIG_HOST_SQLITE"))
 	if err != nil {
 		t.Fatalf("Failed to remove test database: %v", err)
 	}
 }
 
-func TestRepositoryFileSqliteFileCreate(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+func TestRepositoryFileSqliteCreate(t *testing.T) {
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
-	id, err := repo.Create(model.File{
+	id, err := repo.Create(entity.File{
 		Name: "test.txt",
-		Hash: "123ABC456DEF789"},
-	)
+		Hash: "123ABC456DEF789",
+	})
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -69,10 +63,10 @@ func TestRepositoryFileSqliteFileCreate(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteCreateUniqueConstraintName(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: "ABC123",
 	})
@@ -81,7 +75,7 @@ func TestRepositoryFileSqliteCreateUniqueConstraintName(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.File{
+	_, err = repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: "123456789ABC",
 	})
@@ -93,10 +87,10 @@ func TestRepositoryFileSqliteCreateUniqueConstraintName(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteCreateUniqueConstraintHash(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test_a.txt",
 		Hash: "123ABC456",
 	})
@@ -105,7 +99,7 @@ func TestRepositoryFileSqliteCreateUniqueConstraintHash(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.File{
+	_, err = repo.Create(entity.File{
 		Name: "test_b.txt",
 		Hash: "123ABC456",
 	})
@@ -117,13 +111,13 @@ func TestRepositoryFileSqliteCreateUniqueConstraintHash(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteGetHashByName(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	expectedName := "test.txt"
 	expectedHash := "123ABC"
 
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: expectedName,
 		Hash: expectedHash,
 	})
@@ -143,11 +137,11 @@ func TestRepositoryFileSqliteGetHashByName(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteGetHashByNameNotFound(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	hash := "ABC123"
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: hash,
 	})
@@ -157,18 +151,18 @@ func TestRepositoryFileSqliteGetHashByNameNotFound(t *testing.T) {
 	}
 
 	_, err = repo.GetHashByName(hash)
-	expected := errors.New("record not found")
+	expected := ErrorRecordNotFound
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
 }
 
 func TestRepositoryFileSqliteIsExistsByHash(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	hash := "ABC123"
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: hash,
 	})
@@ -188,11 +182,11 @@ func TestRepositoryFileSqliteIsExistsByHash(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteIsExistsByHashNotFound(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	name := "test.txt"
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: name,
 		Hash: "5f5adedeea13569a610a771521f66274",
 	})
@@ -212,11 +206,11 @@ func TestRepositoryFileSqliteIsExistsByHashNotFound(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteRemoveByHash(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	hash := "ABCDEF123456"
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: hash,
 	})
@@ -241,10 +235,10 @@ func TestRepositoryFileSqliteRemoveByHash(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteRemoveByHashNotFound(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: "ABCDEF123456"},
 	)
@@ -254,17 +248,17 @@ func TestRepositoryFileSqliteRemoveByHashNotFound(t *testing.T) {
 	}
 
 	err = repo.RemoveByHash("123ABC456")
-	expected := errors.New("record not found")
+	expected := ErrorRecordNotFound
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
 }
 
 func TestRepositoryFileSqliteRemoveAll(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	db, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
-	_, err := repo.Create(model.File{
+	_, err := repo.Create(entity.File{
 		Name: "test_a.txt",
 		Hash: "5f5adedeea13569a610a771521f66274"},
 	)
@@ -273,7 +267,7 @@ func TestRepositoryFileSqliteRemoveAll(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	_, err = repo.Create(model.File{
+	_, err = repo.Create(entity.File{
 		Name: "test_b.txt",
 		Hash: "69e13300af627698d1b16901d82a28ce"},
 	)
@@ -307,11 +301,11 @@ func TestRepositoryFileSqliteRemoveAll(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteGetIdByHash(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	hash := "ABCDEF123456"
-	expectedId, err := repo.Create(model.File{
+	expectedId, err := repo.Create(entity.File{
 		Name: "test.txt",
 		Hash: hash},
 	)
@@ -331,11 +325,11 @@ func TestRepositoryFileSqliteGetIdByHash(t *testing.T) {
 }
 
 func TestRepositoryFileSqliteGetIdByHashNotFound(t *testing.T) {
-	db, repo := setUpRepositoryFileSqliteTestDB(t)
-	defer setDownRepositoryFileSqliteTestDB(t, db)
+	_, repo := setUpRepositoryFileSqliteTest(t)
+	defer setDownRepositoryFileSqliteTest(t)
 
 	_, err := repo.GetIdByHash("test.txt")
-	expected := errors.New("record not found")
+	expected := ErrorRecordNotFound
 	if err.Error() != expected.Error() {
 		t.Fatalf("Expected error %v, got %v", expected, err)
 	}
