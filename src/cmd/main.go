@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"lab/src/internal/service"
+	"lab/src/internal/handler"
 	"lab/src/logger"
 	"lab/src/repository"
 	"os"
@@ -28,7 +28,7 @@ func main() {
 	}
 
 	logger.LogSetConfig()
-	var serviceAction = service.MakeAction()
+	var action = handler.MakeAction()
 
 	println("Iniciando aplicação...")
 	err = logger.GetLogActivity().WriteLog("Iniciando aplicação...")
@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 
-	if *arg_action != service.ACTION_CLEAR && !isValidArgFileTarget(arg_file_target) {
+	if *arg_action != handler.ACTION_CLEAR && !isValidArgFileTarget(arg_file_target) {
 		logger.GetLogError().WriteLog(fmt.Errorf("invalid value of file-target: %s", *arg_file_target).Error())
 		fmt.Println("Invalid value of file-target:", *arg_file_target)
 		logger.GetLogActivity().WriteLog("Finalizando aplicação...")
@@ -61,9 +61,9 @@ func main() {
 		return
 	}
 
-	serviceAction.Type = *arg_action
-	serviceAction.FileTarget = *arg_file_target
-	err = service.Execute(&serviceAction)
+	action.Type = *arg_action
+	action.FileTarget = *arg_file_target
+	err = handler.Execute(&action)
 	if err != nil {
 		println(err.Error())
 	}
@@ -74,10 +74,10 @@ func main() {
 
 func isValidArgAction(arg_action *string) bool {
 	switch strings.ToLower(*arg_action) {
-	case service.ACTION_CLEAR,
-		service.ACTION_DOWNLOAD,
-		service.ACTION_UPLOAD,
-		service.ACTION_REMOVE:
+	case handler.ACTION_CLEAR,
+		handler.ACTION_DOWNLOAD,
+		handler.ACTION_UPLOAD,
+		handler.ACTION_REMOVE:
 		return true
 	}
 
